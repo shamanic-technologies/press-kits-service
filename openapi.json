@@ -1,0 +1,1386 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Press Kits Service",
+    "description": "API for generating, versioning, and publicly sharing company press kits",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://press-kits.mcpfactory.org"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service"
+        ]
+      },
+      "OrganizationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "shareToken": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clerkOrganizationId",
+          "name",
+          "shareToken",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpsertOrganizationRequest": {
+        "type": "object",
+        "properties": {
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clerkOrganizationId"
+        ]
+      },
+      "ShareTokenResponse": {
+        "type": "object",
+        "properties": {
+          "shareToken": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "shareToken"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "OrganizationExistsResponse": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clerkOrganizationId": {
+                  "type": "string"
+                },
+                "exists": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "clerkOrganizationId",
+                "exists"
+              ]
+            }
+          }
+        },
+        "required": [
+          "organizations"
+        ]
+      },
+      "MediaKitStatus": {
+        "type": "string",
+        "enum": [
+          "drafted",
+          "generating",
+          "validated",
+          "denied",
+          "archived"
+        ]
+      },
+      "MediaKitResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientOrganizationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "clerkOrganizationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "organizationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "iconUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "mdxPageContent": {
+            "type": "string",
+            "nullable": true
+          },
+          "jsxPageContent": {
+            "type": "string",
+            "nullable": true
+          },
+          "jsonPageContent": {
+            "nullable": true
+          },
+          "notionPageContent": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentMediaKitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MediaKitStatus"
+          },
+          "denialReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientOrganizationId",
+          "clerkOrganizationId",
+          "organizationId",
+          "title",
+          "iconUrl",
+          "mdxPageContent",
+          "jsxPageContent",
+          "notionPageContent",
+          "parentMediaKitId",
+          "status",
+          "denialReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "MediaKitListResponse": {
+        "type": "object",
+        "properties": {
+          "mediaKits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaKitResponse"
+            }
+          }
+        },
+        "required": [
+          "mediaKits"
+        ]
+      },
+      "UpdateMdxRequest": {
+        "type": "object",
+        "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mdxContent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaKitId",
+          "mdxContent"
+        ]
+      },
+      "UpdateStatusRequest": {
+        "type": "object",
+        "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MediaKitStatus"
+          },
+          "denialReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaKitId",
+          "status"
+        ]
+      },
+      "EditMediaKitRequest": {
+        "type": "object",
+        "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "organizationUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaKitId",
+          "instruction"
+        ]
+      },
+      "ValidateMediaKitRequest": {
+        "type": "object",
+        "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "mediaKitId"
+        ]
+      },
+      "CancelDraftRequest": {
+        "type": "object",
+        "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "mediaKitId"
+        ]
+      },
+      "PublicMediaKitResponse": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              },
+              "clerkOrganizationId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "clerkOrganizationId"
+            ]
+          },
+          "mediaKit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitResponse"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          }
+        },
+        "required": [
+          "organization",
+          "mediaKit"
+        ]
+      },
+      "EmailDataResponse": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitStatus"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "pressKitUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "companyName",
+          "status",
+          "title",
+          "pressKitUrl",
+          "content",
+          "contentType"
+        ]
+      },
+      "AdminOrganization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "shareToken": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mediaKitCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clerkOrganizationId",
+          "name",
+          "shareToken",
+          "mediaKitCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AdminOrganizationListResponse": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrganization"
+            }
+          }
+        },
+        "required": [
+          "organizations"
+        ]
+      },
+      "GenerationDataResponse": {
+        "type": "object",
+        "properties": {
+          "currentKit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitResponse"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "instructions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "instructionType": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "instruction",
+                "instructionType",
+                "createdAt"
+              ]
+            }
+          },
+          "feedbacks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "denialReason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "denialReason"
+              ]
+            }
+          }
+        },
+        "required": [
+          "currentKit",
+          "instructions",
+          "feedbacks"
+        ]
+      },
+      "UpsertGenerationResultRequest": {
+        "type": "object",
+        "properties": {
+          "clerkOrgId": {
+            "type": "string"
+          },
+          "mdxContent": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "iconUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clerkOrgId",
+          "mdxContent"
+        ]
+      },
+      "StaleKitOrg": {
+        "type": "object",
+        "properties": {
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastUpdated": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clerkOrganizationId",
+          "name",
+          "lastUpdated"
+        ]
+      },
+      "StaleKitsResponse": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaleKitOrg"
+            }
+          }
+        },
+        "required": [
+          "organizations"
+        ]
+      },
+      "MediaKitSetup": {
+        "type": "object",
+        "properties": {
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "hasKit": {
+            "type": "boolean"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitStatus"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "isSetup": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clerkOrganizationId",
+          "hasKit",
+          "status",
+          "isSetup"
+        ]
+      },
+      "MediaKitSetupListResponse": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaKitSetup"
+            }
+          }
+        },
+        "required": [
+          "organizations"
+        ]
+      },
+      "HealthBulkItem": {
+        "type": "object",
+        "properties": {
+          "clerkOrganizationId": {
+            "type": "string"
+          },
+          "hasValidated": {
+            "type": "boolean"
+          },
+          "hasDrafted": {
+            "type": "boolean"
+          },
+          "totalKits": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clerkOrganizationId",
+          "hasValidated",
+          "hasDrafted",
+          "totalKits"
+        ]
+      },
+      "HealthBulkResponse": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthBulkItem"
+            }
+          }
+        },
+        "required": [
+          "organizations"
+        ]
+      }
+    },
+    "parameters": {},
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations": {
+      "post": {
+        "summary": "Upsert organization",
+        "tags": [
+          "Organizations"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organization upserted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/share-token/{clerkOrgId}": {
+      "get": {
+        "summary": "Get share token",
+        "tags": [
+          "Organizations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "clerkOrgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Share token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareTokenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/exists": {
+      "get": {
+        "summary": "Batch check organization existence",
+        "tags": [
+          "Organizations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "clerkOrgIds",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existence check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationExistsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media-kit": {
+      "get": {
+        "summary": "List media kits",
+        "tags": [
+          "Media Kits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "clerk_organization_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "organization_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "title",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media kits list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media-kit/{id}": {
+      "get": {
+        "summary": "Get media kit by ID",
+        "tags": [
+          "Media Kits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media kit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/update-mdx": {
+      "post": {
+        "summary": "Update MDX content",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMdxRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/update-status": {
+      "post": {
+        "summary": "Update media kit status",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/edit-media-kit": {
+      "post": {
+        "summary": "Initiate media kit generation",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMediaKitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generation initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validate": {
+      "post": {
+        "summary": "Validate media kit",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateMediaKitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cancel-draft": {
+      "post": {
+        "summary": "Cancel draft media kit",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Draft cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/{token}": {
+      "get": {
+        "summary": "Get public media kit by share token",
+        "tags": [
+          "Public"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public media kit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMediaKitResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public-media-kit/{token}": {
+      "get": {
+        "summary": "Get public media kit (legacy)",
+        "tags": [
+          "Public"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public media kit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMediaKitResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/email-data/press-kit/{clerkOrgId}": {
+      "get": {
+        "summary": "Get press kit data for email templates",
+        "tags": [
+          "Public"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "clerkOrgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailDataResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations": {
+      "get": {
+        "summary": "List organizations with kit counts",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin org list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrganizationListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{id}": {
+      "delete": {
+        "summary": "Delete organization",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "confirmName",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/media-kit/by-org/{clerkOrgId}": {
+      "get": {
+        "summary": "Get latest media kit by org",
+        "tags": [
+          "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "clerkOrgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media kit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/MediaKitResponse"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/generation-data": {
+      "get": {
+        "summary": "Get data for generation workflow",
+        "tags": [
+          "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "clerkOrgId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generation data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationDataResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/upsert-generation-result": {
+      "post": {
+        "summary": "Upsert generation result (workflow callback)",
+        "tags": [
+          "Internal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertGenerationResultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upserted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients-media-kits-need-update": {
+      "get": {
+        "summary": "Get orgs with stale kits",
+        "tags": [
+          "Internal"
+        ],
+        "responses": {
+          "200": {
+            "description": "Stale kits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleKitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media-kit-setup": {
+      "get": {
+        "summary": "Get setup status for all orgs",
+        "tags": [
+          "Internal"
+        ],
+        "responses": {
+          "200": {
+            "description": "Setup status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitSetupListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/bulk": {
+      "get": {
+        "summary": "Bulk health check per org",
+        "tags": [
+          "Internal"
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthBulkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ]
+}

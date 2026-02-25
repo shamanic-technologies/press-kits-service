@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1772004082878,
+      "tag": "0000_friendly_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772004082879,
+      "tag": "0001_db_functions",
+      "breakpoints": true
+    }
+  ]
+}
