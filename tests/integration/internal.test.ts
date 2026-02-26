@@ -22,17 +22,17 @@ describe("Internal Endpoints", () => {
     await closeDb();
   });
 
-  describe("GET /internal/media-kit/by-org/:clerkOrgId", () => {
+  describe("GET /internal/media-kit/by-org/:orgId", () => {
     it("returns latest kit for org", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_int_1" });
+      const org = await insertTestOrganization({ orgId: "org_int_1" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_int_1",
+        orgId: "org_int_1",
         organizationId: org.id,
         title: "Old Kit",
         status: "archived",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_int_1",
+        orgId: "org_int_1",
         organizationId: org.id,
         title: "New Kit",
         status: "drafted",
@@ -58,9 +58,9 @@ describe("Internal Endpoints", () => {
 
   describe("GET /internal/generation-data", () => {
     it("returns kit, instructions, and feedbacks", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_gen_1" });
+      const org = await insertTestOrganization({ orgId: "org_gen_1" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_gen_1",
+        orgId: "org_gen_1",
         organizationId: org.id,
         status: "generating",
         title: "Generating Kit",
@@ -71,14 +71,14 @@ describe("Internal Endpoints", () => {
         instructionType: "edit",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_gen_1",
+        orgId: "org_gen_1",
         organizationId: org.id,
         status: "denied",
         denialReason: "Too short",
       });
 
       const res = await request(app)
-        .get("/internal/generation-data?clerkOrgId=org_gen_1")
+        .get("/internal/generation-data?orgId=org_gen_1")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -93,9 +93,9 @@ describe("Internal Endpoints", () => {
 
   describe("POST /internal/upsert-generation-result", () => {
     it("updates generating kit to drafted with content", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_upsert_1" });
+      const org = await insertTestOrganization({ orgId: "org_upsert_1" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_upsert_1",
+        orgId: "org_upsert_1",
         organizationId: org.id,
         status: "generating",
       });
@@ -104,7 +104,7 @@ describe("Internal Endpoints", () => {
         .post("/internal/upsert-generation-result")
         .set(headers)
         .send({
-          clerkOrgId: "org_upsert_1",
+          orgId: "org_upsert_1",
           mdxContent: "# Generated Content",
           title: "Generated Kit",
         });
@@ -118,14 +118,14 @@ describe("Internal Endpoints", () => {
 
   describe("GET /media-kit-setup", () => {
     it("returns setup status for all orgs", async () => {
-      const org1 = await insertTestOrganization({ clerkOrganizationId: "org_setup_1" });
+      const org1 = await insertTestOrganization({ orgId: "org_setup_1" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_setup_1",
+        orgId: "org_setup_1",
         organizationId: org1.id,
         status: "validated",
       });
 
-      const org2 = await insertTestOrganization({ clerkOrganizationId: "org_setup_2" });
+      const org2 = await insertTestOrganization({ orgId: "org_setup_2" });
 
       const res = await request(app)
         .get("/media-kit-setup")
@@ -133,8 +133,8 @@ describe("Internal Endpoints", () => {
 
       expect(res.status).toBe(200);
       const orgs = res.body.organizations;
-      const setup1 = orgs.find((o: { clerkOrganizationId: string }) => o.clerkOrganizationId === "org_setup_1");
-      const setup2 = orgs.find((o: { clerkOrganizationId: string }) => o.clerkOrganizationId === "org_setup_2");
+      const setup1 = orgs.find((o: { orgId: string }) => o.orgId === "org_setup_1");
+      const setup2 = orgs.find((o: { orgId: string }) => o.orgId === "org_setup_2");
 
       expect(setup1.hasKit).toBe(true);
       expect(setup1.isSetup).toBe(true);
@@ -145,14 +145,14 @@ describe("Internal Endpoints", () => {
 
   describe("GET /health/bulk", () => {
     it("returns health per org", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_health_1" });
+      const org = await insertTestOrganization({ orgId: "org_health_1" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_health_1",
+        orgId: "org_health_1",
         organizationId: org.id,
         status: "validated",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_health_1",
+        orgId: "org_health_1",
         organizationId: org.id,
         status: "drafted",
       });
@@ -163,7 +163,7 @@ describe("Internal Endpoints", () => {
 
       expect(res.status).toBe(200);
       const item = res.body.organizations.find(
-        (o: { clerkOrganizationId: string }) => o.clerkOrganizationId === "org_health_1"
+        (o: { orgId: string }) => o.orgId === "org_health_1"
       );
       expect(item.hasValidated).toBe(true);
       expect(item.hasDrafted).toBe(true);

@@ -22,13 +22,13 @@ export const organizations = pgTable(
   "organizations",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clerkOrganizationId: varchar("clerk_organization_id").unique().notNull(),
+    orgId: varchar("org_id").unique().notNull(),
     name: varchar("name"),
     shareToken: uuid("share_token").unique().defaultRandom(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_organizations_clerk_org_id").on(table.clerkOrganizationId)]
+  (table) => [index("idx_organizations_org_id").on(table.orgId)]
 );
 
 export const mediaKits = pgTable(
@@ -36,7 +36,7 @@ export const mediaKits = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     clientOrganizationId: uuid("client_organization_id"),
-    clerkOrganizationId: varchar("clerk_organization_id"),
+    orgId: varchar("org_id"),
     organizationId: uuid("organization_id").references(() => organizations.id),
     title: text("title"),
     iconUrl: text("icon_url"),
@@ -52,7 +52,7 @@ export const mediaKits = pgTable(
   },
   (table) => [
     index("idx_media_kits_org_id").on(table.organizationId),
-    index("idx_media_kits_clerk_org_id").on(table.clerkOrganizationId),
+    index("idx_media_kits_ext_org_id").on(table.orgId),
     index("idx_media_kits_status").on(table.status),
   ]
 );

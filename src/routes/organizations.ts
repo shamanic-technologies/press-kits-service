@@ -6,7 +6,7 @@ import { UpsertOrganizationRequestSchema } from "../schemas.js";
 
 const router = Router();
 
-// POST /organizations — upsert org by clerk_organization_id
+// POST /organizations — upsert org by org_id
 router.post("/organizations", async (req, res) => {
   try {
     const body = UpsertOrganizationRequestSchema.parse(req.body);
@@ -14,11 +14,11 @@ router.post("/organizations", async (req, res) => {
     const [org] = await db
       .insert(organizations)
       .values({
-        clerkOrganizationId: body.clerkOrganizationId,
+        orgId: body.orgId,
         name: body.name ?? null,
       })
       .onConflictDoUpdate({
-        target: organizations.clerkOrganizationId,
+        target: organizations.orgId,
         set: {
           name: body.name ?? undefined,
           updatedAt: new Date(),
@@ -33,11 +33,11 @@ router.post("/organizations", async (req, res) => {
   }
 });
 
-// GET /organizations/share-token/:clerkOrgId
-router.get("/organizations/share-token/:clerkOrgId", async (req, res) => {
+// GET /organizations/share-token/:orgId
+router.get("/organizations/share-token/:orgId", async (req, res) => {
   try {
     const org = await db.query.organizations.findFirst({
-      where: eq(organizations.clerkOrganizationId, req.params.clerkOrgId),
+      where: eq(organizations.orgId, req.params.orgId),
     });
 
     if (!org) {
@@ -55,24 +55,24 @@ router.get("/organizations/share-token/:clerkOrgId", async (req, res) => {
 // GET /organizations/exists — batch check
 router.get("/organizations/exists", async (req, res) => {
   try {
-    const clerkOrgIdsParam = req.query.clerkOrgIds as string;
-    if (!clerkOrgIdsParam) {
-      res.status(400).json({ error: "clerkOrgIds query parameter is required" });
+    const orgIdsParam = req.query.orgIds as string;
+    if (!orgIdsParam) {
+      res.status(400).json({ error: "orgIds query parameter is required" });
       return;
     }
 
-    const clerkOrgIds = clerkOrgIdsParam.split(",").map((s) => s.trim()).filter(Boolean);
+    const orgIds = orgIdsParam.split(",").map((s) => s.trim()).filter(Boolean);
 
     const existingOrgs = await db
-      .select({ clerkOrganizationId: organizations.clerkOrganizationId })
+      .select({ orgId: organizations.orgId })
       .from(organizations)
-      .where(inArray(organizations.clerkOrganizationId, clerkOrgIds));
+      .where(inArray(organizations.orgId, orgIds));
 
-    const existingSet = new Set(existingOrgs.map((o) => o.clerkOrganizationId));
+    const existingSet = new Set(existingOrgs.map((o) => o.orgId));
 
     res.json({
-      organizations: clerkOrgIds.map((id) => ({
-        clerkOrganizationId: id,
+      organizations: orgIds.map((id) => ({
+        orgId: id,
         exists: existingSet.has(id),
       })),
     });

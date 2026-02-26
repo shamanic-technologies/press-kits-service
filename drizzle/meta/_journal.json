@@ -15,6 +15,13 @@
       "when": 1772004082879,
       "tag": "0001_db_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772004082880,
+      "tag": "0002_rename_clerk_to_org",
+      "breakpoints": true
     }
   ]
 }

@@ -17,7 +17,7 @@ const MediaKitStatusEnum = z.enum(mediaKitStatusValues).openapi("MediaKitStatus"
 
 export const UpsertOrganizationRequestSchema = z
   .object({
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     name: z.string().optional(),
   })
   .openapi("UpsertOrganizationRequest");
@@ -25,7 +25,7 @@ export const UpsertOrganizationRequestSchema = z
 export const OrganizationResponseSchema = z
   .object({
     id: z.string().uuid(),
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     name: z.string().nullable(),
     shareToken: z.string().uuid(),
     createdAt: z.string(),
@@ -41,7 +41,7 @@ export const OrganizationExistsResponseSchema = z
   .object({
     organizations: z.array(
       z.object({
-        clerkOrganizationId: z.string(),
+        orgId: z.string(),
         exists: z.boolean(),
       })
     ),
@@ -54,7 +54,7 @@ export const MediaKitResponseSchema = z
   .object({
     id: z.string().uuid(),
     clientOrganizationId: z.string().uuid().nullable(),
-    clerkOrganizationId: z.string().nullable(),
+    orgId: z.string().nullable(),
     organizationId: z.string().uuid().nullable(),
     title: z.string().nullable(),
     iconUrl: z.string().nullable(),
@@ -112,7 +112,7 @@ export const PublicMediaKitResponseSchema = z
     organization: z.object({
       id: z.string().uuid(),
       name: z.string().nullable(),
-      clerkOrganizationId: z.string(),
+      orgId: z.string(),
     }),
     mediaKit: MediaKitResponseSchema.nullable(),
   })
@@ -134,7 +134,7 @@ export const EmailDataResponseSchema = z
 export const AdminOrganizationSchema = z
   .object({
     id: z.string().uuid(),
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     name: z.string().nullable(),
     shareToken: z.string().uuid(),
     mediaKitCount: z.number(),
@@ -171,7 +171,7 @@ export const GenerationDataResponseSchema = z
 
 export const UpsertGenerationResultRequestSchema = z
   .object({
-    clerkOrgId: z.string(),
+    orgId: z.string(),
     mdxContent: z.string(),
     title: z.string().optional(),
     iconUrl: z.string().optional(),
@@ -180,7 +180,7 @@ export const UpsertGenerationResultRequestSchema = z
 
 export const MediaKitSetupSchema = z
   .object({
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     hasKit: z.boolean(),
     status: MediaKitStatusEnum.nullable(),
     isSetup: z.boolean(),
@@ -193,7 +193,7 @@ export const MediaKitSetupListResponseSchema = z
 
 export const HealthBulkItemSchema = z
   .object({
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     hasValidated: z.boolean(),
     hasDrafted: z.boolean(),
     totalKits: z.number(),
@@ -206,7 +206,7 @@ export const HealthBulkResponseSchema = z
 
 export const StaleKitOrgSchema = z
   .object({
-    clerkOrganizationId: z.string(),
+    orgId: z.string(),
     name: z.string().nullable(),
     lastUpdated: z.string(),
   })
@@ -249,10 +249,10 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/organizations/share-token/{clerkOrgId}",
+  path: "/organizations/share-token/{orgId}",
   summary: "Get share token",
   tags: ["Organizations"],
-  request: { params: z.object({ clerkOrgId: z.string() }) },
+  request: { params: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Share token", content: { "application/json": { schema: ShareTokenResponseSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
@@ -264,7 +264,7 @@ registry.registerPath({
   path: "/organizations/exists",
   summary: "Batch check organization existence",
   tags: ["Organizations"],
-  request: { query: z.object({ clerkOrgIds: z.string() }) },
+  request: { query: z.object({ orgIds: z.string() }) },
   responses: {
     200: { description: "Existence check", content: { "application/json": { schema: OrganizationExistsResponseSchema } } },
   },
@@ -278,7 +278,7 @@ registry.registerPath({
   tags: ["Media Kits"],
   request: {
     query: z.object({
-      clerk_organization_id: z.string().optional(),
+      org_id: z.string().optional(),
       organization_id: z.string().optional(),
       title: z.string().optional(),
     }),
@@ -382,10 +382,10 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/email-data/press-kit/{clerkOrgId}",
+  path: "/email-data/press-kit/{orgId}",
   summary: "Get press kit data for email templates",
   tags: ["Public"],
-  request: { params: z.object({ clerkOrgId: z.string() }) },
+  request: { params: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Email data", content: { "application/json": { schema: EmailDataResponseSchema } } },
   },
@@ -422,10 +422,10 @@ registry.registerPath({
 // Internal
 registry.registerPath({
   method: "get",
-  path: "/internal/media-kit/by-org/{clerkOrgId}",
+  path: "/internal/media-kit/by-org/{orgId}",
   summary: "Get latest media kit by org",
   tags: ["Internal"],
-  request: { params: z.object({ clerkOrgId: z.string() }) },
+  request: { params: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Media kit", content: { "application/json": { schema: MediaKitResponseSchema.nullable() } } },
   },
@@ -436,7 +436,7 @@ registry.registerPath({
   path: "/internal/generation-data",
   summary: "Get data for generation workflow",
   tags: ["Internal"],
-  request: { query: z.object({ clerkOrgId: z.string() }) },
+  request: { query: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Generation data", content: { "application/json": { schema: GenerationDataResponseSchema } } },
   },

@@ -39,23 +39,23 @@ describe("Media Kits", () => {
   });
 
   describe("GET /media-kit", () => {
-    it("lists kits by clerk_organization_id", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_1" });
+    it("lists kits by org_id", async () => {
+      const org = await insertTestOrganization({ orgId: "org_1" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_1",
+        orgId: "org_1",
         organizationId: org.id,
         title: "Kit 1",
         status: "validated",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_1",
+        orgId: "org_1",
         organizationId: org.id,
         title: "Kit 2",
         status: "drafted",
       });
 
       const res = await request(app)
-        .get("/media-kit?clerk_organization_id=org_1")
+        .get("/media-kit?org_id=org_1")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -66,25 +66,25 @@ describe("Media Kits", () => {
     });
 
     it("excludes archived and denied kits", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_2" });
+      const org = await insertTestOrganization({ orgId: "org_2" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_2",
+        orgId: "org_2",
         organizationId: org.id,
         status: "archived",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_2",
+        orgId: "org_2",
         organizationId: org.id,
         status: "denied",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_2",
+        orgId: "org_2",
         organizationId: org.id,
         status: "drafted",
       });
 
       const res = await request(app)
-        .get("/media-kit?clerk_organization_id=org_2")
+        .get("/media-kit?org_id=org_2")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -101,9 +101,9 @@ describe("Media Kits", () => {
 
   describe("GET /media-kit/:id", () => {
     it("returns kit by id", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_3" });
+      const org = await insertTestOrganization({ orgId: "org_3" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_3",
+        orgId: "org_3",
         organizationId: org.id,
         title: "My Kit",
         status: "drafted",
@@ -127,9 +127,9 @@ describe("Media Kits", () => {
 
   describe("POST /update-mdx", () => {
     it("updates mdx content", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_4" });
+      const org = await insertTestOrganization({ orgId: "org_4" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_4",
+        orgId: "org_4",
         organizationId: org.id,
         status: "drafted",
       });
@@ -146,9 +146,9 @@ describe("Media Kits", () => {
 
   describe("POST /update-status", () => {
     it("updates status to denied with reason", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_5" });
+      const org = await insertTestOrganization({ orgId: "org_5" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_5",
+        orgId: "org_5",
         organizationId: org.id,
         status: "drafted",
       });
@@ -170,9 +170,9 @@ describe("Media Kits", () => {
 
   describe("POST /edit-media-kit", () => {
     it("creates generating copy from validated kit", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_6" });
+      const org = await insertTestOrganization({ orgId: "org_6" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_6",
+        orgId: "org_6",
         organizationId: org.id,
         title: "Validated Kit",
         mdxPageContent: "# Content",
@@ -194,9 +194,9 @@ describe("Media Kits", () => {
     });
 
     it("updates timestamp for already generating kit", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_7" });
+      const org = await insertTestOrganization({ orgId: "org_7" });
       const kit = await insertTestMediaKit({
-        clerkOrganizationId: "org_7",
+        orgId: "org_7",
         organizationId: org.id,
         status: "generating",
       });
@@ -214,15 +214,15 @@ describe("Media Kits", () => {
 
   describe("POST /validate", () => {
     it("validates kit and archives previous", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_8" });
+      const org = await insertTestOrganization({ orgId: "org_8" });
       const validatedKit = await insertTestMediaKit({
-        clerkOrganizationId: "org_8",
+        orgId: "org_8",
         organizationId: org.id,
         status: "validated",
         title: "Old Kit",
       });
       const draftedKit = await insertTestMediaKit({
-        clerkOrganizationId: "org_8",
+        orgId: "org_8",
         organizationId: org.id,
         status: "drafted",
         title: "New Kit",
@@ -247,15 +247,15 @@ describe("Media Kits", () => {
 
   describe("POST /cancel-draft", () => {
     it("cancels draft and restores parent", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_9" });
+      const org = await insertTestOrganization({ orgId: "org_9" });
       const parent = await insertTestMediaKit({
-        clerkOrganizationId: "org_9",
+        orgId: "org_9",
         organizationId: org.id,
         status: "archived",
         title: "Parent Kit",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_9",
+        orgId: "org_9",
         organizationId: org.id,
         status: "drafted",
         title: "Draft Kit",
@@ -263,7 +263,7 @@ describe("Media Kits", () => {
       });
 
       const draft = await insertTestMediaKit({
-        clerkOrganizationId: "org_9",
+        orgId: "org_9",
         organizationId: org.id,
         status: "drafted",
         title: "New Draft",

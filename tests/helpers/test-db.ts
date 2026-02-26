@@ -9,12 +9,12 @@ export async function cleanTestData(): Promise<void> {
 }
 
 export async function insertTestOrganization(
-  data: Partial<NewOrganization> & { clerkOrganizationId: string }
+  data: Partial<NewOrganization> & { orgId: string }
 ) {
   const [org] = await db
     .insert(organizations)
     .values({
-      clerkOrganizationId: data.clerkOrganizationId,
+      orgId: data.orgId,
       name: data.name ?? null,
     })
     .returning();
@@ -28,7 +28,7 @@ export async function insertTestMediaKit(
     .insert(mediaKits)
     .values({
       clientOrganizationId: data.clientOrganizationId ?? null,
-      clerkOrganizationId: data.clerkOrganizationId ?? null,
+      orgId: data.orgId ?? null,
       organizationId: data.organizationId ?? null,
       title: data.title ?? null,
       iconUrl: data.iconUrl ?? null,

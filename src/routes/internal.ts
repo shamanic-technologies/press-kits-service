@@ -6,11 +6,11 @@ import { UpsertGenerationResultRequestSchema } from "../schemas.js";
 
 const router = Router();
 
-// GET /internal/media-kit/by-org/:clerkOrgId — latest kit for an org
-router.get("/internal/media-kit/by-org/:clerkOrgId", async (req, res) => {
+// GET /internal/media-kit/by-org/:orgId — latest kit for an org
+router.get("/internal/media-kit/by-org/:orgId", async (req, res) => {
   try {
     const kit = await db.query.mediaKits.findFirst({
-      where: eq(mediaKits.clerkOrganizationId, req.params.clerkOrgId),
+      where: eq(mediaKits.orgId, req.params.orgId),
       orderBy: desc(mediaKits.updatedAt),
     });
 
@@ -24,16 +24,16 @@ router.get("/internal/media-kit/by-org/:clerkOrgId", async (req, res) => {
 // GET /internal/generation-data — data for generation workflow
 router.get("/internal/generation-data", async (req, res) => {
   try {
-    const clerkOrgId = req.query.clerkOrgId as string;
-    if (!clerkOrgId) {
-      res.status(400).json({ error: "clerkOrgId query parameter required" });
+    const orgId = req.query.orgId as string;
+    if (!orgId) {
+      res.status(400).json({ error: "orgId query parameter required" });
       return;
     }
 
     // Current generating kit
     const currentKit = await db.query.mediaKits.findFirst({
       where: and(
-        eq(mediaKits.clerkOrganizationId, clerkOrgId),
+        eq(mediaKits.orgId, orgId),
         eq(mediaKits.status, "generating")
       ),
     });
@@ -43,7 +43,7 @@ router.get("/internal/generation-data", async (req, res) => {
       SELECT mki.id, mki.instruction, mki.instruction_type, mki.created_at
       FROM media_kit_instructions mki
       JOIN media_kits mk ON mki.media_kit_id = mk.id
-      WHERE mk.clerk_organization_id = ${clerkOrgId}
+      WHERE mk.org_id = ${orgId}
       ORDER BY mki.created_at
     `;
 
@@ -51,7 +51,7 @@ router.get("/internal/generation-data", async (req, res) => {
     const feedbackResults = await sql`
       SELECT id, denial_reason
       FROM media_kits
-      WHERE clerk_organization_id = ${clerkOrgId}
+      WHERE org_id = ${orgId}
         AND denial_reason IS NOT NULL
       ORDER BY updated_at
     `;
@@ -81,13 +81,13 @@ router.post("/internal/upsert-generation-result", async (req, res) => {
     const body = UpsertGenerationResultRequestSchema.parse(req.body);
 
     const result = await sql`
-      SELECT * FROM upsert_generating_media_kit_by_clerk_org(
+      SELECT * FROM upsert_generating_media_kit_by_org(
         ${JSON.stringify({
           mdx_page_content: body.mdxContent,
           title: body.title ?? null,
           icon_url: body.iconUrl ?? null,
         })}::jsonb,
-        ${body.clerkOrgId}::varchar
+        ${body.orgId}::varchar
       )
     `;
 
@@ -111,7 +111,7 @@ router.get("/clients-media-kits-need-update", async (req, res) => {
 
     const results = await db
       .select({
-        clerkOrganizationId: organizations.clerkOrganizationId,
+        orgId: organizations.orgId,
         name: organizations.name,
         lastUpdated: mediaKits.updatedAt,
       })
@@ -128,14 +128,14 @@ router.get("/clients-media-kits-need-update", async (req, res) => {
     // Deduplicate by org (keep oldest)
     const seen = new Set<string>();
     const deduped = results.filter((r) => {
-      if (seen.has(r.clerkOrganizationId)) return false;
-      seen.add(r.clerkOrganizationId);
+      if (seen.has(r.orgId)) return false;
+      seen.add(r.orgId);
       return true;
     });
 
     res.json({
       organizations: deduped.map((r) => ({
-        clerkOrganizationId: r.clerkOrganizationId,
+        orgId: r.orgId,
         name: r.name,
         lastUpdated: r.lastUpdated.toISOString(),
       })),
@@ -162,7 +162,7 @@ router.get("/media-kit-setup", async (req, res) => {
         });
 
         return {
-          clerkOrganizationId: org.clerkOrganizationId,
+          orgId: org.orgId,
           hasKit: !!kit,
           status: kit?.status ?? null,
           isSetup: kit?.status === "validated" || kit?.status === "drafted",
@@ -190,7 +190,7 @@ router.get("/health/bulk", async (req, res) => {
           .where(eq(mediaKits.organizationId, org.id));
 
         return {
-          clerkOrganizationId: org.clerkOrganizationId,
+          orgId: org.orgId,
           hasValidated: kits.some((k) => k.status === "validated"),
           hasDrafted: kits.some((k) => k.status === "drafted"),
           totalKits: kits.length,

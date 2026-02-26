@@ -24,16 +24,16 @@ describe("Admin Endpoints", () => {
   describe("GET /admin/organizations", () => {
     it("lists orgs with kit counts", async () => {
       const org = await insertTestOrganization({
-        clerkOrganizationId: "org_admin_1",
+        orgId: "org_admin_1",
         name: "Admin Org",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_admin_1",
+        orgId: "org_admin_1",
         organizationId: org.id,
         status: "drafted",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_admin_1",
+        orgId: "org_admin_1",
         organizationId: org.id,
         status: "validated",
       });
@@ -49,8 +49,8 @@ describe("Admin Endpoints", () => {
     });
 
     it("supports search filter", async () => {
-      await insertTestOrganization({ clerkOrganizationId: "org_a", name: "Alpha Corp" });
-      await insertTestOrganization({ clerkOrganizationId: "org_b", name: "Beta Inc" });
+      await insertTestOrganization({ orgId: "org_a", name: "Alpha Corp" });
+      await insertTestOrganization({ orgId: "org_b", name: "Beta Inc" });
 
       const res = await request(app)
         .get("/admin/organizations?search=Alpha")
@@ -65,7 +65,7 @@ describe("Admin Endpoints", () => {
   describe("DELETE /admin/organizations/:id", () => {
     it("deletes org with correct confirmName", async () => {
       const org = await insertTestOrganization({
-        clerkOrganizationId: "org_del_1",
+        orgId: "org_del_1",
         name: "Delete Me",
       });
 
@@ -86,7 +86,7 @@ describe("Admin Endpoints", () => {
 
     it("rejects with wrong confirmName", async () => {
       const org = await insertTestOrganization({
-        clerkOrganizationId: "org_del_2",
+        orgId: "org_del_2",
         name: "My Org",
       });
 
@@ -98,7 +98,7 @@ describe("Admin Endpoints", () => {
     });
 
     it("requires confirmName param", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_del_3", name: "Org" });
+      const org = await insertTestOrganization({ orgId: "org_del_3", name: "Org" });
 
       const res = await request(app)
         .delete(`/admin/organizations/${org.id}`)

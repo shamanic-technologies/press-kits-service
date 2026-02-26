@@ -23,11 +23,11 @@ describe("Public Endpoints", () => {
   describe("GET /public/:token", () => {
     it("returns validated kit by share token", async () => {
       const org = await insertTestOrganization({
-        clerkOrganizationId: "org_pub_1",
+        orgId: "org_pub_1",
         name: "Public Org",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_pub_1",
+        orgId: "org_pub_1",
         organizationId: org.id,
         title: "Public Kit",
         mdxPageContent: "# Hello",
@@ -43,9 +43,9 @@ describe("Public Endpoints", () => {
     });
 
     it("falls back to drafted if no validated", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_pub_2" });
+      const org = await insertTestOrganization({ orgId: "org_pub_2" });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_pub_2",
+        orgId: "org_pub_2",
         organizationId: org.id,
         title: "Draft Kit",
         status: "drafted",
@@ -67,7 +67,7 @@ describe("Public Endpoints", () => {
     });
 
     it("requires no auth", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_pub_3" });
+      const org = await insertTestOrganization({ orgId: "org_pub_3" });
       const res = await request(app).get(`/public/${org.shareToken}`);
 
       // Should work without auth headers (200, not 401)
@@ -75,14 +75,14 @@ describe("Public Endpoints", () => {
     });
   });
 
-  describe("GET /email-data/press-kit/:clerkOrgId", () => {
+  describe("GET /email-data/press-kit/:orgId", () => {
     it("returns email data for org with kit", async () => {
       const org = await insertTestOrganization({
-        clerkOrganizationId: "org_email_1",
+        orgId: "org_email_1",
         name: "Email Org",
       });
       await insertTestMediaKit({
-        clerkOrganizationId: "org_email_1",
+        orgId: "org_email_1",
         organizationId: org.id,
         title: "Email Kit",
         mdxPageContent: "# Email Content",
