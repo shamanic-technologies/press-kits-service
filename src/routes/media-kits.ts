@@ -20,12 +20,12 @@ const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
 // GET /media-kit — list kits for an org
 router.get("/media-kit", async (req, res) => {
   try {
-    const clerkOrgId = req.query.clerk_organization_id as string | undefined;
-    const orgId = req.query.organization_id as string | undefined;
+    const orgIdParam = req.query.org_id as string | undefined;
+    const organizationId = req.query.organization_id as string | undefined;
     const titleFilter = req.query.title as string | undefined;
 
-    if (!clerkOrgId && !orgId) {
-      res.status(400).json({ error: "clerk_organization_id or organization_id required" });
+    if (!orgIdParam && !organizationId) {
+      res.status(400).json({ error: "org_id or organization_id required" });
       return;
     }
 
@@ -33,11 +33,11 @@ router.get("/media-kit", async (req, res) => {
       inArray(mediaKits.status, [...ACTIVE_STATUSES]),
     ];
 
-    if (clerkOrgId) {
-      conditions.push(eq(mediaKits.clerkOrganizationId, clerkOrgId));
+    if (orgIdParam) {
+      conditions.push(eq(mediaKits.orgId, orgIdParam));
     }
-    if (orgId) {
-      conditions.push(eq(mediaKits.organizationId, orgId));
+    if (organizationId) {
+      conditions.push(eq(mediaKits.organizationId, organizationId));
     }
     if (titleFilter) {
       conditions.push(ilike(mediaKits.title, `%${titleFilter}%`));
@@ -153,7 +153,7 @@ router.post("/edit-media-kit", async (req, res) => {
         .insert(mediaKits)
         .values({
           clientOrganizationId: currentKit.clientOrganizationId,
-          clerkOrganizationId: currentKit.clerkOrganizationId,
+          orgId: currentKit.orgId,
           organizationId: currentKit.organizationId,
           title: currentKit.title,
           iconUrl: currentKit.iconUrl,
@@ -187,17 +187,17 @@ router.post("/edit-media-kit", async (req, res) => {
     });
 
     // Create run + trigger workflow (fire-and-forget)
-    const clerkOrgId = generatingKit.clerkOrganizationId;
-    if (clerkOrgId) {
+    const orgId = generatingKit.orgId;
+    if (orgId) {
       createRun({
-        clerkOrgId,
+        orgId,
         appId: "press-kits-service",
         serviceName: "press-kits-service",
         taskName: "generate-press-kit",
       })
         .then((run) =>
           executeWorkflowByName("generate-press-kit", "press-kits-service", {
-            clerkOrgId,
+            orgId,
             mediaKitId: generatingKit.id,
             organizationUrl: body.organizationUrl,
           }, run.id)
@@ -229,11 +229,11 @@ router.post("/validate", async (req, res) => {
     const kit = result[0];
 
     // Send press_kit_ready email (fire-and-forget)
-    if (kit.clerk_organization_id) {
+    if (kit.org_id) {
       sendEmail({
         appId: "press-kits-service",
         eventType: "press_kit_ready",
-        clerkOrgId: kit.clerk_organization_id as string,
+        orgId: kit.org_id as string,
         metadata: {
           title: (kit.title as string) || "Press Kit",
         },

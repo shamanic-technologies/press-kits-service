@@ -40,7 +40,7 @@ router.get("/public/:token", async (req, res) => {
       organization: {
         id: org.id,
         name: org.name,
-        clerkOrganizationId: org.clerkOrganizationId,
+        orgId: org.orgId,
       },
       mediaKit: kit ?? null,
     });
@@ -94,7 +94,7 @@ router.get("/public-media-kit/:token", async (req, res) => {
       organization: {
         id: org.id,
         name: org.name,
-        clerkOrganizationId: org.clerkOrganizationId,
+        orgId: org.orgId,
       },
       mediaKit: kit ?? null,
     });
@@ -104,11 +104,11 @@ router.get("/public-media-kit/:token", async (req, res) => {
   }
 });
 
-// GET /email-data/press-kit/:clerkOrgId
-router.get("/email-data/press-kit/:clerkOrgId", async (req, res) => {
+// GET /email-data/press-kit/:orgId
+router.get("/email-data/press-kit/:orgId", async (req, res) => {
   try {
     const org = await db.query.organizations.findFirst({
-      where: eq(organizations.clerkOrganizationId, req.params.clerkOrgId),
+      where: eq(organizations.orgId, req.params.orgId),
     });
 
     if (!org) {

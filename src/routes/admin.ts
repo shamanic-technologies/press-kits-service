@@ -17,7 +17,7 @@ router.get("/admin/organizations", async (req, res) => {
     const results = await db
       .select({
         id: organizations.id,
-        clerkOrganizationId: organizations.clerkOrganizationId,
+        orgId: organizations.orgId,
         name: organizations.name,
         shareToken: organizations.shareToken,
         createdAt: organizations.createdAt,

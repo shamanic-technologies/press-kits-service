@@ -34,7 +34,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "name": {
@@ -54,7 +54,7 @@
         },
         "required": [
           "id",
-          "clerkOrganizationId",
+          "orgId",
           "name",
           "shareToken",
           "createdAt",
@@ -64,7 +64,7 @@
       "UpsertOrganizationRequest": {
         "type": "object",
         "properties": {
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "name": {
@@ -72,7 +72,7 @@
           }
         },
         "required": [
-          "clerkOrganizationId"
+          "orgId"
         ]
       },
       "ShareTokenResponse": {
@@ -106,7 +106,7 @@
             "items": {
               "type": "object",
               "properties": {
-                "clerkOrganizationId": {
+                "orgId": {
                   "type": "string"
                 },
                 "exists": {
@@ -114,7 +114,7 @@
                 }
               },
               "required": [
-                "clerkOrganizationId",
+                "orgId",
                 "exists"
               ]
             }
@@ -146,7 +146,7 @@
             "nullable": true,
             "format": "uuid"
           },
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string",
             "nullable": true
           },
@@ -200,7 +200,7 @@
         "required": [
           "id",
           "clientOrganizationId",
-          "clerkOrganizationId",
+          "orgId",
           "organizationId",
           "title",
           "iconUrl",
@@ -320,14 +320,14 @@
                 "type": "string",
                 "nullable": true
               },
-              "clerkOrganizationId": {
+              "orgId": {
                 "type": "string"
               }
             },
             "required": [
               "id",
               "name",
-              "clerkOrganizationId"
+              "orgId"
             ]
           },
           "mediaKit": {
@@ -396,7 +396,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "name": {
@@ -419,7 +419,7 @@
         },
         "required": [
           "id",
-          "clerkOrganizationId",
+          "orgId",
           "name",
           "shareToken",
           "mediaKitCount",
@@ -510,7 +510,7 @@
       "UpsertGenerationResultRequest": {
         "type": "object",
         "properties": {
-          "clerkOrgId": {
+          "orgId": {
             "type": "string"
           },
           "mdxContent": {
@@ -524,14 +524,14 @@
           }
         },
         "required": [
-          "clerkOrgId",
+          "orgId",
           "mdxContent"
         ]
       },
       "StaleKitOrg": {
         "type": "object",
         "properties": {
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "name": {
@@ -543,7 +543,7 @@
           }
         },
         "required": [
-          "clerkOrganizationId",
+          "orgId",
           "name",
           "lastUpdated"
         ]
@@ -565,7 +565,7 @@
       "MediaKitSetup": {
         "type": "object",
         "properties": {
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "hasKit": {
@@ -586,7 +586,7 @@
           }
         },
         "required": [
-          "clerkOrganizationId",
+          "orgId",
           "hasKit",
           "status",
           "isSetup"
@@ -609,7 +609,7 @@
       "HealthBulkItem": {
         "type": "object",
         "properties": {
-          "clerkOrganizationId": {
+          "orgId": {
             "type": "string"
           },
           "hasValidated": {
@@ -623,7 +623,7 @@
           }
         },
         "required": [
-          "clerkOrganizationId",
+          "orgId",
           "hasValidated",
           "hasDrafted",
           "totalKits"
@@ -703,7 +703,7 @@
         }
       }
     },
-    "/organizations/share-token/{clerkOrgId}": {
+    "/organizations/share-token/{orgId}": {
       "get": {
         "summary": "Get share token",
         "tags": [
@@ -715,7 +715,7 @@
               "type": "string"
             },
             "required": true,
-            "name": "clerkOrgId",
+            "name": "orgId",
             "in": "path"
           }
         ],
@@ -755,7 +755,7 @@
               "type": "string"
             },
             "required": true,
-            "name": "clerkOrgIds",
+            "name": "orgIds",
             "in": "query"
           }
         ],
@@ -785,7 +785,7 @@
               "type": "string"
             },
             "required": false,
-            "name": "clerk_organization_id",
+            "name": "org_id",
             "in": "query"
           },
           {
@@ -1094,7 +1094,7 @@
         }
       }
     },
-    "/email-data/press-kit/{clerkOrgId}": {
+    "/email-data/press-kit/{orgId}": {
       "get": {
         "summary": "Get press kit data for email templates",
         "tags": [
@@ -1106,7 +1106,7 @@
               "type": "string"
             },
             "required": true,
-            "name": "clerkOrgId",
+            "name": "orgId",
             "in": "path"
           }
         ],
@@ -1221,7 +1221,7 @@
         }
       }
     },
-    "/internal/media-kit/by-org/{clerkOrgId}": {
+    "/internal/media-kit/by-org/{orgId}": {
       "get": {
         "summary": "Get latest media kit by org",
         "tags": [
@@ -1233,7 +1233,7 @@
               "type": "string"
             },
             "required": true,
-            "name": "clerkOrgId",
+            "name": "orgId",
             "in": "path"
           }
         ],
@@ -1270,7 +1270,7 @@
               "type": "string"
             },
             "required": true,
-            "name": "clerkOrgId",
+            "name": "orgId",
             "in": "query"
           }
         ],

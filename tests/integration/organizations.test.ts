@@ -21,10 +21,10 @@ describe("Organizations", () => {
       const res = await request(app)
         .post("/organizations")
         .set(headers)
-        .send({ clerkOrganizationId: "org_123", name: "Test Org" });
+        .send({ orgId: "org_123", name: "Test Org" });
 
       expect(res.status).toBe(200);
-      expect(res.body.clerkOrganizationId).toBe("org_123");
+      expect(res.body.orgId).toBe("org_123");
       expect(res.body.name).toBe("Test Org");
       expect(res.body.shareToken).toBeDefined();
       expect(res.body.id).toBeDefined();
@@ -34,12 +34,12 @@ describe("Organizations", () => {
       await request(app)
         .post("/organizations")
         .set(headers)
-        .send({ clerkOrganizationId: "org_123", name: "Old Name" });
+        .send({ orgId: "org_123", name: "Old Name" });
 
       const res = await request(app)
         .post("/organizations")
         .set(headers)
-        .send({ clerkOrganizationId: "org_123", name: "New Name" });
+        .send({ orgId: "org_123", name: "New Name" });
 
       expect(res.status).toBe(200);
       expect(res.body.name).toBe("New Name");
@@ -48,15 +48,15 @@ describe("Organizations", () => {
     it("requires auth", async () => {
       const res = await request(app)
         .post("/organizations")
-        .send({ clerkOrganizationId: "org_123" });
+        .send({ orgId: "org_123" });
 
       expect(res.status).toBe(401);
     });
   });
 
-  describe("GET /organizations/share-token/:clerkOrgId", () => {
+  describe("GET /organizations/share-token/:orgId", () => {
     it("returns share token", async () => {
-      const org = await insertTestOrganization({ clerkOrganizationId: "org_456" });
+      const org = await insertTestOrganization({ orgId: "org_456" });
 
       const res = await request(app)
         .get("/organizations/share-token/org_456")
@@ -77,16 +77,16 @@ describe("Organizations", () => {
 
   describe("GET /organizations/exists", () => {
     it("batch checks existence", async () => {
-      await insertTestOrganization({ clerkOrganizationId: "org_a" });
+      await insertTestOrganization({ orgId: "org_a" });
 
       const res = await request(app)
-        .get("/organizations/exists?clerkOrgIds=org_a,org_b")
+        .get("/organizations/exists?orgIds=org_a,org_b")
         .set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.organizations).toHaveLength(2);
-      expect(res.body.organizations[0]).toEqual({ clerkOrganizationId: "org_a", exists: true });
-      expect(res.body.organizations[1]).toEqual({ clerkOrganizationId: "org_b", exists: false });
+      expect(res.body.organizations[0]).toEqual({ orgId: "org_a", exists: true });
+      expect(res.body.organizations[1]).toEqual({ orgId: "org_b", exists: false });
     });
 
     it("returns 400 without query param", async () => {

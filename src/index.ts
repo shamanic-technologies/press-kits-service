@@ -58,7 +58,7 @@ const PRESS_KIT_GENERATION_WORKFLOW = {
           path: "/internal/generation-data",
         },
         inputMapping: {
-          "query.clerkOrgId": "$ref:flow_input.clerkOrgId",
+          "query.orgId": "$ref:flow_input.orgId",
         },
       },
       {
@@ -85,7 +85,7 @@ const PRESS_KIT_GENERATION_WORKFLOW = {
           path: "/internal/upsert-generation-result",
         },
         inputMapping: {
-          "body.clerkOrgId": "$ref:flow_input.clerkOrgId",
+          "body.orgId": "$ref:flow_input.orgId",
           "body.mdxContent": "$ref:generate-mdx.output.bodyHtml",
           "body.title": "$ref:generate-mdx.output.title",
         },
