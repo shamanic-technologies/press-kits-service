@@ -275,10 +275,6 @@
           },
           "organizationUrl": {
             "type": "string"
-          },
-          "parentRunId": {
-            "type": "string",
-            "format": "uuid"
           }
         },
         "required": [

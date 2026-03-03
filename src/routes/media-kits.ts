@@ -194,7 +194,7 @@ router.post("/edit-media-kit", async (req, res) => {
         userId: req.userId,
         serviceName: "press-kits-service",
         taskName: "generate-press-kit",
-        parentRunId: body.parentRunId,
+        parentRunId: req.runId,
       })
         .then((run) =>
           executeWorkflowByName("generate-press-kit", {

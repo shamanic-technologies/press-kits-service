@@ -193,7 +193,7 @@ describe("Media Kits", () => {
       expect(res.body.mdxPageContent).toBe("# Content");
     });
 
-    it("passes parentRunId to createRun", async () => {
+    it("passes x-run-id header as parentRunId to createRun", async () => {
       const { createRun } = await import("../../src/lib/runs-client.js");
       const org = await insertTestOrganization({ orgId: "org_parent_run" });
       const kit = await insertTestMediaKit({
@@ -205,11 +205,13 @@ describe("Media Kits", () => {
 
       await request(app)
         .post("/edit-media-kit")
-        .set(headers)
+        .set({
+          ...headers,
+          "x-run-id": "00000000-0000-0000-0000-000000000001",
+        })
         .send({
           mediaKitId: kit.id,
           instruction: "Update content",
-          parentRunId: "00000000-0000-0000-0000-000000000001",
         });
 
       expect(createRun).toHaveBeenCalledWith(
