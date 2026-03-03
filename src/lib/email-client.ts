@@ -2,7 +2,6 @@ const EMAIL_SERVICE_URL = process.env.TRANSACTIONAL_EMAIL_SERVICE_URL || "http:/
 const EMAIL_SERVICE_API_KEY = process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY || "";
 
 export async function deployTemplates(
-  appId: string,
   templates: Array<{ name: string; subject: string; htmlBody: string; textBody?: string }>
 ): Promise<void> {
   const response = await fetch(`${EMAIL_SERVICE_URL}/templates`, {
@@ -11,7 +10,7 @@ export async function deployTemplates(
       "Content-Type": "application/json",
       "x-api-key": EMAIL_SERVICE_API_KEY,
     },
-    body: JSON.stringify({ appId, templates }),
+    body: JSON.stringify({ templates }),
   });
 
   if (!response.ok) {
@@ -21,20 +20,17 @@ export async function deployTemplates(
 }
 
 export async function sendEmail(params: {
-  appId: string;
   eventType: string;
   orgId: string;
   metadata: Record<string, string>;
 }): Promise<void> {
-  const { orgId, ...rest } = params;
   const response = await fetch(`${EMAIL_SERVICE_URL}/send`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": EMAIL_SERVICE_API_KEY,
     },
-    // Map orgId to clerkOrgId at boundary — email service hasn't migrated yet
-    body: JSON.stringify({ ...rest, clerkOrgId: orgId }),
+    body: JSON.stringify(params),
   });
 
   if (!response.ok) {

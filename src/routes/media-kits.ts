@@ -191,12 +191,13 @@ router.post("/edit-media-kit", async (req, res) => {
     if (orgId) {
       createRun({
         orgId,
-        appId: "press-kits-service",
+        userId: req.userId,
         serviceName: "press-kits-service",
         taskName: "generate-press-kit",
+        parentRunId: body.parentRunId,
       })
         .then((run) =>
-          executeWorkflowByName("generate-press-kit", "press-kits-service", {
+          executeWorkflowByName("generate-press-kit", {
             orgId,
             mediaKitId: generatingKit.id,
             organizationUrl: body.organizationUrl,
@@ -231,7 +232,6 @@ router.post("/validate", async (req, res) => {
     // Send press_kit_ready email (fire-and-forget)
     if (kit.org_id) {
       sendEmail({
-        appId: "press-kits-service",
         eventType: "press_kit_ready",
         orgId: kit.org_id as string,
         metadata: {

@@ -1,5 +1,5 @@
 import express from "express";
-import { requireApiKey } from "../../src/middleware/auth.js";
+import { requireApiKey, requireIdentityHeaders } from "../../src/middleware/auth.js";
 import healthRoutes from "../../src/routes/health.js";
 import organizationsRoutes from "../../src/routes/organizations.js";
 import mediaKitsRoutes from "../../src/routes/media-kits.js";
@@ -17,6 +17,7 @@ export function createTestApp(): express.Express {
 
   // Protected routes
   app.use(requireApiKey);
+  app.use(requireIdentityHeaders);
   app.use(organizationsRoutes);
   app.use(mediaKitsRoutes);
   app.use(adminRoutes);
@@ -26,5 +27,9 @@ export function createTestApp(): express.Express {
 }
 
 export function getAuthHeaders(): Record<string, string> {
-  return { "X-API-Key": "test-api-key" };
+  return {
+    "X-API-Key": "test-api-key",
+    "x-org-id": "test-org-id",
+    "x-user-id": "test-user-id",
+  };
 }

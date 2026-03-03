@@ -193,6 +193,33 @@ describe("Media Kits", () => {
       expect(res.body.mdxPageContent).toBe("# Content");
     });
 
+    it("passes parentRunId to createRun", async () => {
+      const { createRun } = await import("../../src/lib/runs-client.js");
+      const org = await insertTestOrganization({ orgId: "org_parent_run" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_parent_run",
+        organizationId: org.id,
+        title: "Kit with parent run",
+        status: "validated",
+      });
+
+      await request(app)
+        .post("/edit-media-kit")
+        .set(headers)
+        .send({
+          mediaKitId: kit.id,
+          instruction: "Update content",
+          parentRunId: "00000000-0000-0000-0000-000000000001",
+        });
+
+      expect(createRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentRunId: "00000000-0000-0000-0000-000000000001",
+          userId: "test-user-id",
+        })
+      );
+    });
+
     it("updates timestamp for already generating kit", async () => {
       const org = await insertTestOrganization({ orgId: "org_7" });
       const kit = await insertTestMediaKit({
