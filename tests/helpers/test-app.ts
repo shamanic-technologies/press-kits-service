@@ -31,5 +31,6 @@ export function getAuthHeaders(): Record<string, string> {
     "X-API-Key": "test-api-key",
     "x-org-id": "test-org-id",
     "x-user-id": "test-user-id",
+    "x-run-id": "test-run-id",
   };
 }

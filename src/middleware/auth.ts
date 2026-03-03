@@ -5,6 +5,7 @@ declare global {
     interface Request {
       orgId: string;
       userId: string;
+      runId: string;
     }
   }
 }
@@ -21,11 +22,13 @@ export function requireApiKey(req: Request, res: Response, next: NextFunction): 
 export function requireIdentityHeaders(req: Request, res: Response, next: NextFunction): void {
   const orgId = req.headers["x-org-id"] as string | undefined;
   const userId = req.headers["x-user-id"] as string | undefined;
-  if (!orgId || !userId) {
-    res.status(400).json({ error: "x-org-id and x-user-id headers are required" });
+  const runId = req.headers["x-run-id"] as string | undefined;
+  if (!orgId || !userId || !runId) {
+    res.status(400).json({ error: "x-org-id, x-user-id, and x-run-id headers are required" });
     return;
   }
   req.orgId = orgId;
   req.userId = userId;
+  req.runId = runId;
   next();
 }

@@ -94,7 +94,6 @@ export const EditMediaKitRequestSchema = z
     mediaKitId: z.string().uuid(),
     instruction: z.string(),
     organizationUrl: z.string().optional(),
-    parentRunId: z.string().uuid().optional(),
   })
   .openapi("EditMediaKitRequest");
 
