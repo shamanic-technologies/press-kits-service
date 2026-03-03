@@ -4,9 +4,8 @@ import cors from "cors";
 import * as Sentry from "@sentry/node";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./db/index.js";
-import { requireApiKey } from "./middleware/auth.js";
+import { requireApiKey, requireIdentityHeaders } from "./middleware/auth.js";
 import { deployWorkflows } from "./lib/windmill-client.js";
-import { registerAppKey } from "./lib/key-client.js";
 import { deployTemplates } from "./lib/email-client.js";
 
 import healthRoutes from "./routes/health.js";
@@ -28,8 +27,9 @@ app.use(healthRoutes);
 app.use(publicRoutes);
 app.use(openapiRoutes);
 
-// Protected routes (require API key)
+// Protected routes (require API key + identity headers)
 app.use(requireApiKey);
+app.use(requireIdentityHeaders);
 app.use(organizationsRoutes);
 app.use(mediaKitsRoutes);
 app.use(adminRoutes);
@@ -70,7 +70,6 @@ const PRESS_KIT_GENERATION_WORKFLOW = {
           path: "/generate",
         },
         inputMapping: {
-          "body.appId": "$ref:flow_input.appId",
           "body.variables": "$ref:fetch-data.output",
           "body.parentRunId": "$ref:flow_input.runId",
         },
@@ -125,25 +124,19 @@ async function startup(): Promise<void> {
   await migrate(db, { migrationsFolder: "./drizzle" });
   console.log("Migrations complete");
 
-  // 2. Register app keys (idempotent)
-  if (process.env.ANTHROPIC_API_KEY && process.env.KEY_SERVICE_API_KEY) {
-    await registerAppKey("press-kits-service", "anthropic", process.env.ANTHROPIC_API_KEY);
-    console.log("App keys registered");
-  }
-
-  // 3. Deploy windmill workflow (idempotent)
+  // 2. Deploy windmill workflow (idempotent)
   if (process.env.WORKFLOW_SERVICE_API_KEY) {
-    await deployWorkflows("press-kits-service", [PRESS_KIT_GENERATION_WORKFLOW]);
+    await deployWorkflows([PRESS_KIT_GENERATION_WORKFLOW]);
     console.log("Workflows deployed");
   }
 
-  // 4. Deploy email templates (idempotent)
+  // 3. Deploy email templates (idempotent)
   if (process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY) {
-    await deployTemplates("press-kits-service", [PRESS_KIT_READY_TEMPLATE]);
+    await deployTemplates([PRESS_KIT_READY_TEMPLATE]);
     console.log("Email templates deployed");
   }
 
-  // 5. Start listening
+  // 4. Start listening
   app.listen(Number(PORT), "::", () => {
     console.log(`press-kits-service running on port ${PORT}`);
   });

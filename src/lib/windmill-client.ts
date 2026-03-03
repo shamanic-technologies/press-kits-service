@@ -19,21 +19,20 @@ async function workflowRequest<T>(path: string, options: { method?: string; body
   return response.json() as Promise<T>;
 }
 
-export async function deployWorkflows(appId: string, workflows: unknown[]): Promise<void> {
+export async function deployWorkflows(workflows: unknown[]): Promise<void> {
   await workflowRequest("/workflows/deploy", {
     method: "PUT",
-    body: { appId, workflows },
+    body: { workflows },
   });
 }
 
 export async function executeWorkflowByName(
   name: string,
-  appId: string,
   inputs: Record<string, unknown>,
   runId?: string
 ): Promise<{ workflowRunId: string }> {
   return workflowRequest(`/workflows/by-name/${encodeURIComponent(name)}/execute`, {
     method: "POST",
-    body: { appId, inputs, runId },
+    body: { inputs, runId },
   });
 }

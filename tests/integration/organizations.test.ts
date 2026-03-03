@@ -52,6 +52,16 @@ describe("Organizations", () => {
 
       expect(res.status).toBe(401);
     });
+
+    it("requires identity headers", async () => {
+      const res = await request(app)
+        .post("/organizations")
+        .set({ "X-API-Key": "test-api-key" })
+        .send({ orgId: "org_123" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("x-org-id");
+    });
   });
 
   describe("GET /organizations/share-token/:orgId", () => {

@@ -21,9 +21,10 @@ async function runsRequest<T>(path: string, options: { method?: string; body?: u
 
 export async function createRun(params: {
   orgId: string;
-  appId: string;
+  userId?: string;
   serviceName: string;
   taskName: string;
+  parentRunId?: string;
 }): Promise<{ id: string }> {
   return runsRequest("/v1/runs", { method: "POST", body: params });
 }
@@ -34,7 +35,7 @@ export async function updateRunStatus(runId: string, status: "completed" | "fail
 
 export async function addCosts(
   runId: string,
-  items: Array<{ costName: string; quantity: number; status?: string }>
+  items: Array<{ costName: string; quantity: number; costSource: "platform" | "org"; status?: string }>
 ): Promise<void> {
   await runsRequest(`/v1/runs/${runId}/costs`, { method: "POST", body: { items } });
 }
