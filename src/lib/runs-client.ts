@@ -1,14 +1,25 @@
+import type { ContextHeaders } from "../middleware/auth.js";
+import { buildForwardHeaders } from "../middleware/auth.js";
+
 const RUNS_SERVICE_URL = process.env.RUNS_SERVICE_URL || "http://localhost:3003";
 const RUNS_SERVICE_API_KEY = process.env.RUNS_SERVICE_API_KEY || "";
 
-async function runsRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
-  const { method = "GET", body } = options;
+async function runsRequest<T>(
+  path: string,
+  options: { method?: string; body?: unknown; ctx?: ContextHeaders } = {}
+): Promise<T> {
+  const { method = "GET", body, ctx } = options;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-API-Key": RUNS_SERVICE_API_KEY,
+  };
+  if (ctx) {
+    Object.assign(headers, buildForwardHeaders(ctx));
+  }
+
   const response = await fetch(`${RUNS_SERVICE_URL}${path}`, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": RUNS_SERVICE_API_KEY,
-    },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -25,17 +36,24 @@ export async function createRun(params: {
   serviceName: string;
   taskName: string;
   parentRunId?: string;
+  ctx?: ContextHeaders;
 }): Promise<{ id: string }> {
-  return runsRequest("/v1/runs", { method: "POST", body: params });
+  const { ctx, ...body } = params;
+  return runsRequest("/v1/runs", { method: "POST", body, ctx });
 }
 
-export async function updateRunStatus(runId: string, status: "completed" | "failed"): Promise<void> {
-  await runsRequest(`/v1/runs/${runId}`, { method: "PATCH", body: { status } });
+export async function updateRunStatus(
+  runId: string,
+  status: "completed" | "failed",
+  ctx?: ContextHeaders
+): Promise<void> {
+  await runsRequest(`/v1/runs/${runId}`, { method: "PATCH", body: { status }, ctx });
 }
 
 export async function addCosts(
   runId: string,
-  items: Array<{ costName: string; quantity: number; costSource: "platform" | "org"; status?: string }>
+  items: Array<{ costName: string; quantity: number; costSource: "platform" | "org"; status?: string }>,
+  ctx?: ContextHeaders
 ): Promise<void> {
-  await runsRequest(`/v1/runs/${runId}/costs`, { method: "POST", body: { items } });
+  await runsRequest(`/v1/runs/${runId}/costs`, { method: "POST", body: { items }, ctx });
 }

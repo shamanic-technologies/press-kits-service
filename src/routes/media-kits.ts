@@ -12,6 +12,8 @@ import {
 import { createRun } from "../lib/runs-client.js";
 import { executeWorkflowByName } from "../lib/windmill-client.js";
 import { sendEmail } from "../lib/email-client.js";
+import { authorizeBilling } from "../lib/billing-client.js";
+import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -134,6 +136,21 @@ router.post("/update-status", async (req, res) => {
 router.post("/edit-media-kit", async (req, res) => {
   try {
     const body = EditMediaKitRequestSchema.parse(req.body);
+    const ctx = getContextHeaders(req);
+
+    // Authorize billing before proceeding
+    const authResult = await authorizeBilling(
+      [{ costName: "press-kit-generation", quantity: 1 }],
+      ctx
+    );
+    if (!authResult.sufficient) {
+      res.status(402).json({
+        error: "Insufficient credits",
+        balance_cents: authResult.balance_cents,
+        required_cents: authResult.required_cents,
+      });
+      return;
+    }
 
     // Fetch current kit
     const currentKit = await db.query.mediaKits.findFirst({
@@ -163,14 +180,22 @@ router.post("/edit-media-kit", async (req, res) => {
           notionPageContent: currentKit.notionPageContent,
           parentMediaKitId: currentKit.id,
           status: "generating",
+          workflowName: ctx.workflowName ?? null,
+          brandId: ctx.brandId ?? null,
+          campaignId: ctx.campaignId ?? null,
         })
         .returning();
       generatingKit = newKit;
     } else if (currentKit.status === "generating") {
-      // Update timestamp
+      // Update timestamp + context fields
       const [updated] = await db
         .update(mediaKits)
-        .set({ updatedAt: new Date() })
+        .set({
+          updatedAt: new Date(),
+          workflowName: ctx.workflowName ?? currentKit.workflowName,
+          brandId: ctx.brandId ?? currentKit.brandId,
+          campaignId: ctx.campaignId ?? currentKit.campaignId,
+        })
         .where(eq(mediaKits.id, currentKit.id))
         .returning();
       generatingKit = updated;
@@ -195,13 +220,14 @@ router.post("/edit-media-kit", async (req, res) => {
         serviceName: "press-kits-service",
         taskName: "generate-press-kit",
         parentRunId: req.runId,
+        ctx,
       })
         .then((run) =>
           executeWorkflowByName("generate-press-kit", {
             orgId,
             mediaKitId: generatingKit.id,
             organizationUrl: body.organizationUrl,
-          }, run.id)
+          }, run.id, ctx)
         )
         .catch((err) => console.error("Workflow trigger failed:", err));
     }
@@ -217,6 +243,7 @@ router.post("/edit-media-kit", async (req, res) => {
 router.post("/validate", async (req, res) => {
   try {
     const body = ValidateMediaKitRequestSchema.parse(req.body);
+    const ctx = getContextHeaders(req);
 
     const result = await sql`
       SELECT * FROM validate_media_kit_with_archive(${body.mediaKitId}::uuid)
@@ -237,7 +264,7 @@ router.post("/validate", async (req, res) => {
         metadata: {
           title: (kit.title as string) || "Press Kit",
         },
-      }).catch((err) => console.error("Email send failed:", err));
+      }, ctx).catch((err) => console.error("Email send failed:", err));
     }
 
     res.json(kit);

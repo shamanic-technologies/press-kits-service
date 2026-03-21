@@ -65,6 +65,9 @@ export const MediaKitResponseSchema = z
     parentMediaKitId: z.string().uuid().nullable(),
     status: MediaKitStatusEnum,
     denialReason: z.string().nullable(),
+    workflowName: z.string().nullable(),
+    brandId: z.string().nullable(),
+    campaignId: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })

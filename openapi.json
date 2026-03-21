@@ -190,6 +190,18 @@
             "type": "string",
             "nullable": true
           },
+          "workflowName": {
+            "type": "string",
+            "nullable": true
+          },
+          "brandId": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string"
           },
@@ -210,6 +222,9 @@
           "parentMediaKitId",
           "status",
           "denialReason",
+          "workflowName",
+          "brandId",
+          "campaignId",
           "createdAt",
           "updatedAt"
         ]

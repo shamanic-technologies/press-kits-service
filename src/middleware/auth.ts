@@ -6,6 +6,9 @@ declare global {
       orgId: string;
       userId: string;
       runId: string;
+      workflowName?: string;
+      brandId?: string;
+      campaignId?: string;
     }
   }
 }
@@ -30,5 +33,40 @@ export function requireIdentityHeaders(req: Request, res: Response, next: NextFu
   req.orgId = orgId;
   req.userId = userId;
   req.runId = runId;
+  req.workflowName = req.headers["x-workflow-name"] as string | undefined;
+  req.brandId = req.headers["x-brand-id"] as string | undefined;
+  req.campaignId = req.headers["x-campaign-id"] as string | undefined;
   next();
+}
+
+export interface ContextHeaders {
+  orgId: string;
+  userId: string;
+  runId: string;
+  workflowName?: string;
+  brandId?: string;
+  campaignId?: string;
+}
+
+export function getContextHeaders(req: Request): ContextHeaders {
+  return {
+    orgId: req.orgId,
+    userId: req.userId,
+    runId: req.runId,
+    workflowName: req.workflowName,
+    brandId: req.brandId,
+    campaignId: req.campaignId,
+  };
+}
+
+export function buildForwardHeaders(ctx: ContextHeaders): Record<string, string> {
+  const headers: Record<string, string> = {
+    "x-org-id": ctx.orgId,
+    "x-user-id": ctx.userId,
+    "x-run-id": ctx.runId,
+  };
+  if (ctx.workflowName) headers["x-workflow-name"] = ctx.workflowName;
+  if (ctx.brandId) headers["x-brand-id"] = ctx.brandId;
+  if (ctx.campaignId) headers["x-campaign-id"] = ctx.campaignId;
+  return headers;
 }

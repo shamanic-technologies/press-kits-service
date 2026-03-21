@@ -25,6 +25,10 @@ vi.mock("../../src/lib/email-client.js", () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../src/lib/billing-client.js", () => ({
+  authorizeBilling: vi.fn().mockResolvedValue({ sufficient: true, balance_cents: 10000, required_cents: 100 }),
+}));
+
 const app = createTestApp();
 const headers = getAuthHeaders();
 
