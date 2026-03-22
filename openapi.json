@@ -285,6 +285,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "orgId": {
+            "type": "string"
+          },
           "instruction": {
             "type": "string"
           },
@@ -293,7 +296,6 @@
           }
         },
         "required": [
-          "mediaKitId",
           "instruction"
         ]
       },
@@ -935,7 +937,8 @@
     },
     "/edit-media-kit": {
       "post": {
-        "summary": "Initiate media kit generation",
+        "summary": "Create or edit a media kit",
+        "description": "Idempotent create-or-edit. Pass mediaKitId to edit a specific kit, or orgId to find the latest active kit for that org (or create a new one if none exists). At least one of mediaKitId or orgId is required.",
         "tags": [
           "Media Kits"
         ],

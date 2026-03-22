@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, inArray, ilike, sql as drizzleSql, desc } from "drizzle-orm";
+import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull } from "drizzle-orm";
 import { db, sql } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import {
@@ -132,24 +132,64 @@ router.post("/update-status", async (req, res) => {
 });
 
 // POST /edit-media-kit
+// Idempotent create-or-edit: pass mediaKitId to edit a specific kit,
+// or orgId to find the latest active kit (or create a new one if none exists).
 router.post("/edit-media-kit", async (req, res) => {
   try {
     const body = EditMediaKitRequestSchema.parse(req.body);
     const ctx = getContextHeaders(req);
 
-    // Fetch current kit
-    const currentKit = await db.query.mediaKits.findFirst({
-      where: eq(mediaKits.id, body.mediaKitId),
-    });
-
-    if (!currentKit) {
-      res.status(404).json({ error: "Media kit not found" });
-      return;
+    // Resolve the current kit: by ID or by orgId lookup
+    let currentKit;
+    if (body.mediaKitId) {
+      currentKit = await db.query.mediaKits.findFirst({
+        where: eq(mediaKits.id, body.mediaKitId),
+      });
+      if (!currentKit) {
+        res.status(404).json({ error: "Media kit not found" });
+        return;
+      }
+    } else {
+      // Find latest active kit for this org
+      currentKit = await db.query.mediaKits.findFirst({
+        where: and(
+          eq(mediaKits.orgId, body.orgId!),
+          inArray(mediaKits.status, ["validated", "drafted", "generating"]),
+        ),
+        orderBy: [
+          drizzleSql`CASE status
+            WHEN 'generating' THEN 1
+            WHEN 'validated' THEN 2
+            WHEN 'drafted' THEN 3
+          END`,
+          desc(mediaKits.updatedAt),
+        ],
+      });
+      // No kit exists for this org — create a brand new one
     }
 
     let generatingKit;
 
-    if (currentKit.status === "validated" || currentKit.status === "drafted") {
+    if (!currentKit) {
+      // First kit for this org — create from scratch
+      const [newKit] = await db
+        .insert(mediaKits)
+        .values({
+          orgId: body.orgId!,
+          status: "generating",
+          workflowName: ctx.workflowName ?? null,
+          brandId: ctx.brandId ?? null,
+          campaignId: ctx.campaignId ?? null,
+        })
+        .returning();
+      generatingKit = newKit;
+
+      await db.insert(mediaKitInstructions).values({
+        mediaKitId: generatingKit.id,
+        instruction: body.instruction,
+        instructionType: "initial",
+      });
+    } else if (currentKit.status === "validated" || currentKit.status === "drafted") {
       // Create copy with status=generating
       const [newKit] = await db
         .insert(mediaKits)
@@ -171,6 +211,12 @@ router.post("/edit-media-kit", async (req, res) => {
         })
         .returning();
       generatingKit = newKit;
+
+      await db.insert(mediaKitInstructions).values({
+        mediaKitId: generatingKit.id,
+        instruction: body.instruction,
+        instructionType: "initial",
+      });
     } else if (currentKit.status === "generating") {
       // Update timestamp + context fields
       const [updated] = await db
@@ -184,17 +230,16 @@ router.post("/edit-media-kit", async (req, res) => {
         .where(eq(mediaKits.id, currentKit.id))
         .returning();
       generatingKit = updated;
+
+      await db.insert(mediaKitInstructions).values({
+        mediaKitId: generatingKit.id,
+        instruction: body.instruction,
+        instructionType: "edit",
+      });
     } else {
       res.status(400).json({ error: `Cannot edit kit with status: ${currentKit.status}` });
       return;
     }
-
-    // Store instruction
-    await db.insert(mediaKitInstructions).values({
-      mediaKitId: generatingKit.id,
-      instruction: body.instruction,
-      instructionType: currentKit.status === "generating" ? "edit" : "initial",
-    });
 
     // Create run + trigger workflow (fire-and-forget)
     const orgId = generatingKit.orgId;

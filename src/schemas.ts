@@ -94,9 +94,13 @@ export const UpdateStatusRequestSchema = z
 
 export const EditMediaKitRequestSchema = z
   .object({
-    mediaKitId: z.string().uuid(),
+    mediaKitId: z.string().uuid().optional(),
+    orgId: z.string().optional(),
     instruction: z.string(),
     organizationUrl: z.string().optional(),
+  })
+  .refine((data) => data.mediaKitId || data.orgId, {
+    message: "Either mediaKitId or orgId is required",
   })
   .openapi("EditMediaKitRequest");
 
@@ -328,7 +332,8 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/edit-media-kit",
-  summary: "Initiate media kit generation",
+  summary: "Create or edit a media kit",
+  description: "Idempotent create-or-edit. Pass mediaKitId to edit a specific kit, or orgId to find the latest active kit for that org (or create a new one if none exists). At least one of mediaKitId or orgId is required.",
   tags: ["Media Kits"],
   request: { body: { content: { "application/json": { schema: EditMediaKitRequestSchema } } } },
   responses: {
