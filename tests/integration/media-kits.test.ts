@@ -97,7 +97,50 @@ describe("Media Kits", () => {
       expect(res.body.mediaKits[0].status).toBe("drafted");
     });
 
-    it("requires organization filter", async () => {
+    it("filters by campaign_id", async () => {
+      const org = await insertTestOrganization({ orgId: "org_campaign" });
+      await insertTestMediaKit({
+        orgId: "org_campaign",
+        organizationId: org.id,
+        title: "Campaign Kit",
+        status: "validated",
+        campaignId: "camp-123",
+      });
+      await insertTestMediaKit({
+        orgId: "org_campaign",
+        organizationId: org.id,
+        title: "Other Kit",
+        status: "validated",
+        campaignId: "camp-456",
+      });
+
+      const res = await request(app)
+        .get("/media-kits?campaign_id=camp-123")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].campaignId).toBe("camp-123");
+    });
+
+    it("allows campaign_id as sole filter (no org_id needed)", async () => {
+      const org = await insertTestOrganization({ orgId: "org_campaign_solo" });
+      await insertTestMediaKit({
+        orgId: "org_campaign_solo",
+        organizationId: org.id,
+        status: "drafted",
+        campaignId: "camp-solo",
+      });
+
+      const res = await request(app)
+        .get("/media-kits?campaign_id=camp-solo")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits).toHaveLength(1);
+    });
+
+    it("requires at least one filter", async () => {
       const res = await request(app).get("/media-kits").set(headers);
 
       expect(res.status).toBe(400);
