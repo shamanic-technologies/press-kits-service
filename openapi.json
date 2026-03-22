@@ -277,9 +277,6 @@
           },
           "instruction": {
             "type": "string"
-          },
-          "organizationUrl": {
-            "type": "string"
           }
         },
         "required": [
