@@ -25,9 +25,10 @@ router.get("/media-kits", async (req, res) => {
     const orgIdParam = req.query.org_id as string | undefined;
     const organizationId = req.query.organization_id as string | undefined;
     const titleFilter = req.query.title as string | undefined;
+    const campaignIdFilter = req.query.campaign_id as string | undefined;
 
-    if (!orgIdParam && !organizationId) {
-      res.status(400).json({ error: "org_id or organization_id required" });
+    if (!orgIdParam && !organizationId && !campaignIdFilter) {
+      res.status(400).json({ error: "org_id, organization_id, or campaign_id required" });
       return;
     }
 
@@ -43,6 +44,9 @@ router.get("/media-kits", async (req, res) => {
     }
     if (titleFilter) {
       conditions.push(ilike(mediaKits.title, `%${titleFilter}%`));
+    }
+    if (campaignIdFilter) {
+      conditions.push(eq(mediaKits.campaignId, campaignIdFilter));
     }
 
     const results = await db

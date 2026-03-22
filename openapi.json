@@ -780,6 +780,14 @@
             "required": false,
             "name": "title",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "campaign_id",
+            "in": "query"
           }
         ],
         "responses": {

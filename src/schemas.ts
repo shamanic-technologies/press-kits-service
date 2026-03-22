@@ -281,6 +281,7 @@ registry.registerPath({
       org_id: z.string().optional(),
       organization_id: z.string().optional(),
       title: z.string().optional(),
+      campaign_id: z.string().optional(),
     }),
   },
   responses: {
