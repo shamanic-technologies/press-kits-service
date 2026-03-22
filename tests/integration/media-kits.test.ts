@@ -223,6 +223,77 @@ describe("Media Kits", () => {
       );
     });
 
+    it("creates new kit from scratch when orgId has no existing kit", async () => {
+      await insertTestOrganization({ orgId: "org_new" });
+
+      const res = await request(app)
+        .post("/edit-media-kit")
+        .set(headers)
+        .send({
+          orgId: "org_new",
+          instruction: "Create my first press kit",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("generating");
+      expect(res.body.orgId).toBe("org_new");
+      expect(res.body.parentMediaKitId).toBeNull();
+    });
+
+    it("finds and edits latest validated kit when orgId is provided", async () => {
+      const org = await insertTestOrganization({ orgId: "org_by_orgid" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_by_orgid",
+        organizationId: org.id,
+        title: "Existing Kit",
+        mdxPageContent: "# Old",
+        status: "validated",
+      });
+
+      const res = await request(app)
+        .post("/edit-media-kit")
+        .set(headers)
+        .send({
+          orgId: "org_by_orgid",
+          instruction: "Update it",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("generating");
+      expect(res.body.parentMediaKitId).toBe(kit.id);
+      expect(res.body.mdxPageContent).toBe("# Old");
+    });
+
+    it("reuses existing generating kit when orgId is provided", async () => {
+      const org = await insertTestOrganization({ orgId: "org_gen" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_gen",
+        organizationId: org.id,
+        status: "generating",
+      });
+
+      const res = await request(app)
+        .post("/edit-media-kit")
+        .set(headers)
+        .send({
+          orgId: "org_gen",
+          instruction: "Try again",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(kit.id);
+      expect(res.body.status).toBe("generating");
+    });
+
+    it("returns 400 when neither mediaKitId nor orgId is provided", async () => {
+      const res = await request(app)
+        .post("/edit-media-kit")
+        .set(headers)
+        .send({ instruction: "Do something" });
+
+      expect(res.status).toBe(400);
+    });
+
     it("updates timestamp for already generating kit", async () => {
       const org = await insertTestOrganization({ orgId: "org_7" });
       const kit = await insertTestMediaKit({
