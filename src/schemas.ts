@@ -94,7 +94,6 @@ export const CreateMediaKitRequestSchema = z
   .object({
     mediaKitId: z.string().uuid().optional(),
     instruction: z.string(),
-    organizationUrl: z.string().optional(),
   })
   .openapi("CreateMediaKitRequest");
 

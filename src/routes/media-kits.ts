@@ -12,6 +12,7 @@ import {
 import { createRun } from "../lib/runs-client.js";
 import { executeWorkflowByName } from "../lib/windmill-client.js";
 import { sendEmail } from "../lib/email-client.js";
+import { getBrandDomain } from "../lib/brand-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
@@ -244,19 +245,26 @@ router.post("/media-kits", async (req, res) => {
     // Create run + trigger workflow (fire-and-forget)
     const kitOrgId = generatingKit.orgId;
     if (kitOrgId) {
-      createRun({
-        orgId: kitOrgId,
-        userId: req.userId,
-        serviceName: "press-kits-service",
-        taskName: "generate-press-kit",
-        parentRunId: req.runId,
-        ctx,
-      })
-        .then((run) =>
+      const brandDomain = ctx.brandId
+        ? getBrandDomain(ctx.brandId, ctx).catch(() => null)
+        : Promise.resolve(null);
+
+      Promise.all([
+        createRun({
+          orgId: kitOrgId,
+          userId: req.userId,
+          serviceName: "press-kits-service",
+          taskName: "generate-press-kit",
+          parentRunId: req.runId,
+          ctx,
+        }),
+        brandDomain,
+      ])
+        .then(([run, domain]) =>
           executeWorkflowByName("generate-press-kit", {
             orgId: kitOrgId,
             mediaKitId: generatingKit.id,
-            organizationUrl: body.organizationUrl,
+            organizationUrl: domain,
           }, run.id, ctx)
         )
         .catch((err) => console.error("Workflow trigger failed:", err));
