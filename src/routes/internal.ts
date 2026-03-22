@@ -6,29 +6,25 @@ import { UpsertGenerationResultRequestSchema } from "../schemas.js";
 
 const router = Router();
 
-// GET /internal/media-kit/by-org/:orgId — latest kit for an org
-router.get("/internal/media-kit/by-org/:orgId", async (req, res) => {
+// GET /internal/media-kits/current — latest kit for the org (from x-org-id header)
+router.get("/internal/media-kits/current", async (req, res) => {
   try {
     const kit = await db.query.mediaKits.findFirst({
-      where: eq(mediaKits.orgId, req.params.orgId),
+      where: eq(mediaKits.orgId, req.orgId),
       orderBy: desc(mediaKits.updatedAt),
     });
 
     res.json(kit ?? null);
   } catch (err) {
-    console.error("GET /internal/media-kit/by-org error:", err);
+    console.error("GET /internal/media-kits/current error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /internal/generation-data — data for generation workflow
-router.get("/internal/generation-data", async (req, res) => {
+// GET /internal/media-kits/generation-data — data for generation workflow (orgId from header)
+router.get("/internal/media-kits/generation-data", async (req, res) => {
   try {
-    const orgId = req.query.orgId as string;
-    if (!orgId) {
-      res.status(400).json({ error: "orgId query parameter required" });
-      return;
-    }
+    const orgId = req.orgId;
 
     // Current generating kit
     const currentKit = await db.query.mediaKits.findFirst({
@@ -70,13 +66,13 @@ router.get("/internal/generation-data", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("GET /internal/generation-data error:", err);
+    console.error("GET /internal/media-kits/generation-data error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// POST /internal/upsert-generation-result — workflow callback
-router.post("/internal/upsert-generation-result", async (req, res) => {
+// POST /internal/media-kits/generation-result — workflow callback
+router.post("/internal/media-kits/generation-result", async (req, res) => {
   try {
     const body = UpsertGenerationResultRequestSchema.parse(req.body);
 
@@ -98,13 +94,13 @@ router.post("/internal/upsert-generation-result", async (req, res) => {
 
     res.json(result[0]);
   } catch (err) {
-    console.error("POST /internal/upsert-generation-result error:", err);
+    console.error("POST /internal/media-kits/generation-result error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
 
-// GET /clients-media-kits-need-update — orgs with stale kits (>1 month old)
-router.get("/clients-media-kits-need-update", async (req, res) => {
+// GET /internal/media-kits/stale — orgs with stale kits (>1 month old)
+router.get("/internal/media-kits/stale", async (req, res) => {
   try {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -141,13 +137,13 @@ router.get("/clients-media-kits-need-update", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("GET /clients-media-kits-need-update error:", err);
+    console.error("GET /internal/media-kits/stale error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /media-kit-setup — setup status for all orgs
-router.get("/media-kit-setup", async (req, res) => {
+// GET /internal/media-kits/setup — setup status for all orgs
+router.get("/internal/media-kits/setup", async (req, res) => {
   try {
     const orgs = await db.select().from(organizations);
 
@@ -172,13 +168,13 @@ router.get("/media-kit-setup", async (req, res) => {
 
     res.json({ organizations: result });
   } catch (err) {
-    console.error("GET /media-kit-setup error:", err);
+    console.error("GET /internal/media-kits/setup error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /health/bulk — health per org
-router.get("/health/bulk", async (req, res) => {
+// GET /internal/health/bulk — health per org
+router.get("/internal/health/bulk", async (req, res) => {
   try {
     const orgs = await db.select().from(organizations);
 
@@ -200,7 +196,50 @@ router.get("/health/bulk", async (req, res) => {
 
     res.json({ organizations: result });
   } catch (err) {
-    console.error("GET /health/bulk error:", err);
+    console.error("GET /internal/health/bulk error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /internal/email-data/:orgId — press kit data for email templates
+router.get("/internal/email-data/:orgId", async (req, res) => {
+  try {
+    const org = await db.query.organizations.findFirst({
+      where: eq(organizations.orgId, req.params.orgId),
+    });
+
+    if (!org) {
+      res.json({
+        companyName: null,
+        status: null,
+        title: null,
+        pressKitUrl: null,
+        content: null,
+        contentType: null,
+      });
+      return;
+    }
+
+    const kit = await db.query.mediaKits.findFirst({
+      where: and(
+        eq(mediaKits.organizationId, org.id),
+        inArray(mediaKits.status, ["validated", "drafted"])
+      ),
+      orderBy: desc(mediaKits.updatedAt),
+    });
+
+    const pressKitUrl = org.shareToken ? `/public/${org.shareToken}` : null;
+
+    res.json({
+      companyName: org.name,
+      status: kit?.status ?? null,
+      title: kit?.title ?? null,
+      pressKitUrl,
+      content: kit?.mdxPageContent ?? kit?.jsxPageContent ?? null,
+      contentType: kit?.mdxPageContent ? "mdx" : kit?.jsxPageContent ? "jsx" : null,
+    });
+  } catch (err) {
+    console.error("GET /internal/email-data error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

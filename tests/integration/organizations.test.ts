@@ -64,12 +64,12 @@ describe("Organizations", () => {
     });
   });
 
-  describe("GET /organizations/share-token/:orgId", () => {
+  describe("GET /organizations/:orgId/share-token", () => {
     it("returns share token", async () => {
       const org = await insertTestOrganization({ orgId: "org_456" });
 
       const res = await request(app)
-        .get("/organizations/share-token/org_456")
+        .get("/organizations/org_456/share-token")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -78,7 +78,7 @@ describe("Organizations", () => {
 
     it("returns 404 for unknown org", async () => {
       const res = await request(app)
-        .get("/organizations/share-token/org_unknown")
+        .get("/organizations/org_unknown/share-token")
         .set(headers);
 
       expect(res.status).toBe(404);

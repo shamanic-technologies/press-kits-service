@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull } from "drizzle-orm";
+import { eq, and, inArray, ilike, sql as drizzleSql, desc } from "drizzle-orm";
 import { db, sql } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import {
   UpdateMdxRequestSchema,
   UpdateStatusRequestSchema,
-  EditMediaKitRequestSchema,
+  CreateMediaKitRequestSchema,
   ValidateMediaKitRequestSchema,
   CancelDraftRequestSchema,
 } from "../schemas.js";
@@ -18,8 +18,8 @@ const router = Router();
 
 const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
 
-// GET /media-kit — list kits for an org
-router.get("/media-kit", async (req, res) => {
+// GET /media-kits — list kits for an org
+router.get("/media-kits", async (req, res) => {
   try {
     const orgIdParam = req.query.org_id as string | undefined;
     const organizationId = req.query.organization_id as string | undefined;
@@ -59,13 +59,13 @@ router.get("/media-kit", async (req, res) => {
 
     res.json({ mediaKits: results });
   } catch (err) {
-    console.error("GET /media-kit error:", err);
+    console.error("GET /media-kits error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /media-kit/:id
-router.get("/media-kit/:id", async (req, res) => {
+// GET /media-kits/:id
+router.get("/media-kits/:id", async (req, res) => {
   try {
     const kit = await db.query.mediaKits.findFirst({
       where: eq(mediaKits.id, req.params.id),
@@ -78,20 +78,20 @@ router.get("/media-kit/:id", async (req, res) => {
 
     res.json(kit);
   } catch (err) {
-    console.error("GET /media-kit/:id error:", err);
+    console.error("GET /media-kits/:id error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// POST /update-mdx
-router.post("/update-mdx", async (req, res) => {
+// PATCH /media-kits/:id/mdx
+router.patch("/media-kits/:id/mdx", async (req, res) => {
   try {
     const body = UpdateMdxRequestSchema.parse(req.body);
 
     const [updated] = await db
       .update(mediaKits)
       .set({ mdxPageContent: body.mdxContent, updatedAt: new Date() })
-      .where(eq(mediaKits.id, body.mediaKitId))
+      .where(eq(mediaKits.id, req.params.id))
       .returning();
 
     if (!updated) {
@@ -101,19 +101,19 @@ router.post("/update-mdx", async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.error("POST /update-mdx error:", err);
+    console.error("PATCH /media-kits/:id/mdx error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
 
-// POST /update-status
-router.post("/update-status", async (req, res) => {
+// PATCH /media-kits/:id/status
+router.patch("/media-kits/:id/status", async (req, res) => {
   try {
     const body = UpdateStatusRequestSchema.parse(req.body);
 
     const result = await sql`
       SELECT * FROM update_media_kit_status(
-        ${body.mediaKitId}::uuid,
+        ${req.params.id}::uuid,
         ${body.status}::text,
         ${body.denialReason ?? null}::text
       )
@@ -126,20 +126,21 @@ router.post("/update-status", async (req, res) => {
 
     res.json(result[0]);
   } catch (err) {
-    console.error("POST /update-status error:", err);
+    console.error("PATCH /media-kits/:id/status error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
 
-// POST /edit-media-kit
-// Idempotent create-or-edit: pass mediaKitId to edit a specific kit,
-// or orgId to find the latest active kit (or create a new one if none exists).
-router.post("/edit-media-kit", async (req, res) => {
+// POST /media-kits — create or edit a media kit
+// Idempotent: finds the latest active kit for the org (from x-org-id header),
+// or creates a new one if none exists. Optionally pass mediaKitId to target a specific kit.
+router.post("/media-kits", async (req, res) => {
   try {
-    const body = EditMediaKitRequestSchema.parse(req.body);
+    const body = CreateMediaKitRequestSchema.parse(req.body);
     const ctx = getContextHeaders(req);
+    const orgId = req.orgId;
 
-    // Resolve the current kit: by ID or by orgId lookup
+    // Resolve the current kit: by ID or by org lookup
     let currentKit;
     if (body.mediaKitId) {
       currentKit = await db.query.mediaKits.findFirst({
@@ -153,7 +154,7 @@ router.post("/edit-media-kit", async (req, res) => {
       // Find latest active kit for this org
       currentKit = await db.query.mediaKits.findFirst({
         where: and(
-          eq(mediaKits.orgId, body.orgId!),
+          eq(mediaKits.orgId, orgId),
           inArray(mediaKits.status, ["validated", "drafted", "generating"]),
         ),
         orderBy: [
@@ -165,7 +166,6 @@ router.post("/edit-media-kit", async (req, res) => {
           desc(mediaKits.updatedAt),
         ],
       });
-      // No kit exists for this org — create a brand new one
     }
 
     let generatingKit;
@@ -175,7 +175,7 @@ router.post("/edit-media-kit", async (req, res) => {
       const [newKit] = await db
         .insert(mediaKits)
         .values({
-          orgId: body.orgId!,
+          orgId,
           status: "generating",
           workflowName: ctx.workflowName ?? null,
           brandId: ctx.brandId ?? null,
@@ -242,10 +242,10 @@ router.post("/edit-media-kit", async (req, res) => {
     }
 
     // Create run + trigger workflow (fire-and-forget)
-    const orgId = generatingKit.orgId;
-    if (orgId) {
+    const kitOrgId = generatingKit.orgId;
+    if (kitOrgId) {
       createRun({
-        orgId,
+        orgId: kitOrgId,
         userId: req.userId,
         serviceName: "press-kits-service",
         taskName: "generate-press-kit",
@@ -254,7 +254,7 @@ router.post("/edit-media-kit", async (req, res) => {
       })
         .then((run) =>
           executeWorkflowByName("generate-press-kit", {
-            orgId,
+            orgId: kitOrgId,
             mediaKitId: generatingKit.id,
             organizationUrl: body.organizationUrl,
           }, run.id, ctx)
@@ -264,19 +264,18 @@ router.post("/edit-media-kit", async (req, res) => {
 
     res.json(generatingKit);
   } catch (err) {
-    console.error("POST /edit-media-kit error:", err);
+    console.error("POST /media-kits error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
 
-// POST /validate
-router.post("/validate", async (req, res) => {
+// POST /media-kits/:id/validate
+router.post("/media-kits/:id/validate", async (req, res) => {
   try {
-    const body = ValidateMediaKitRequestSchema.parse(req.body);
     const ctx = getContextHeaders(req);
 
     const result = await sql`
-      SELECT * FROM validate_media_kit_with_archive(${body.mediaKitId}::uuid)
+      SELECT * FROM validate_media_kit_with_archive(${req.params.id}::uuid)
     `;
 
     if (result.length === 0) {
@@ -299,23 +298,21 @@ router.post("/validate", async (req, res) => {
 
     res.json(kit);
   } catch (err) {
-    console.error("POST /validate error:", err);
+    console.error("POST /media-kits/:id/validate error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
 
-// POST /cancel-draft
-router.post("/cancel-draft", async (req, res) => {
+// POST /media-kits/:id/cancel
+router.post("/media-kits/:id/cancel", async (req, res) => {
   try {
-    const body = CancelDraftRequestSchema.parse(req.body);
-
     const result = await sql`
-      SELECT * FROM cancel_draft_media_kit(${body.mediaKitId}::uuid)
+      SELECT * FROM cancel_draft_media_kit(${req.params.id}::uuid)
     `;
 
     res.json({ success: true, result: result[0] ?? null });
   } catch (err) {
-    console.error("POST /cancel-draft error:", err);
+    console.error("POST /media-kits/:id/cancel error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });

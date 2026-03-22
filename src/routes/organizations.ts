@@ -34,7 +34,7 @@ router.post("/organizations", async (req, res) => {
 });
 
 // GET /organizations/share-token/:orgId
-router.get("/organizations/share-token/:orgId", async (req, res) => {
+router.get("/organizations/:orgId/share-token", async (req, res) => {
   try {
     const org = await db.query.organizations.findFirst({
       where: eq(organizations.orgId, req.params.orgId),
