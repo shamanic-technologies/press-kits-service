@@ -22,24 +22,24 @@ describe("Internal Endpoints", () => {
     await closeDb();
   });
 
-  describe("GET /internal/media-kit/by-org/:orgId", () => {
+  describe("GET /internal/media-kits/current", () => {
     it("returns latest kit for org", async () => {
-      const org = await insertTestOrganization({ orgId: "org_int_1" });
+      const org = await insertTestOrganization({ orgId: "test-org-id" });
       await insertTestMediaKit({
-        orgId: "org_int_1",
+        orgId: "test-org-id",
         organizationId: org.id,
         title: "Old Kit",
         status: "archived",
       });
       await insertTestMediaKit({
-        orgId: "org_int_1",
+        orgId: "test-org-id",
         organizationId: org.id,
         title: "New Kit",
         status: "drafted",
       });
 
       const res = await request(app)
-        .get("/internal/media-kit/by-org/org_int_1")
+        .get("/internal/media-kits/current")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -48,7 +48,7 @@ describe("Internal Endpoints", () => {
 
     it("returns null for org with no kits", async () => {
       const res = await request(app)
-        .get("/internal/media-kit/by-org/org_none")
+        .get("/internal/media-kits/current")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -56,11 +56,11 @@ describe("Internal Endpoints", () => {
     });
   });
 
-  describe("GET /internal/generation-data", () => {
+  describe("GET /internal/media-kits/generation-data", () => {
     it("returns kit, instructions, and feedbacks", async () => {
-      const org = await insertTestOrganization({ orgId: "org_gen_1" });
+      const org = await insertTestOrganization({ orgId: "test-org-id" });
       const kit = await insertTestMediaKit({
-        orgId: "org_gen_1",
+        orgId: "test-org-id",
         organizationId: org.id,
         status: "generating",
         title: "Generating Kit",
@@ -71,14 +71,14 @@ describe("Internal Endpoints", () => {
         instructionType: "edit",
       });
       await insertTestMediaKit({
-        orgId: "org_gen_1",
+        orgId: "test-org-id",
         organizationId: org.id,
         status: "denied",
         denialReason: "Too short",
       });
 
       const res = await request(app)
-        .get("/internal/generation-data?orgId=org_gen_1")
+        .get("/internal/media-kits/generation-data")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -91,7 +91,7 @@ describe("Internal Endpoints", () => {
     });
   });
 
-  describe("POST /internal/upsert-generation-result", () => {
+  describe("POST /internal/media-kits/generation-result", () => {
     it("updates generating kit to drafted with content", async () => {
       const org = await insertTestOrganization({ orgId: "org_upsert_1" });
       await insertTestMediaKit({
@@ -101,7 +101,7 @@ describe("Internal Endpoints", () => {
       });
 
       const res = await request(app)
-        .post("/internal/upsert-generation-result")
+        .post("/internal/media-kits/generation-result")
         .set(headers)
         .send({
           orgId: "org_upsert_1",
@@ -116,7 +116,7 @@ describe("Internal Endpoints", () => {
     });
   });
 
-  describe("GET /media-kit-setup", () => {
+  describe("GET /internal/media-kits/setup", () => {
     it("returns setup status for all orgs", async () => {
       const org1 = await insertTestOrganization({ orgId: "org_setup_1" });
       await insertTestMediaKit({
@@ -128,7 +128,7 @@ describe("Internal Endpoints", () => {
       const org2 = await insertTestOrganization({ orgId: "org_setup_2" });
 
       const res = await request(app)
-        .get("/media-kit-setup")
+        .get("/internal/media-kits/setup")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -143,7 +143,7 @@ describe("Internal Endpoints", () => {
     });
   });
 
-  describe("GET /health/bulk", () => {
+  describe("GET /internal/health/bulk", () => {
     it("returns health per org", async () => {
       const org = await insertTestOrganization({ orgId: "org_health_1" });
       await insertTestMediaKit({
@@ -158,7 +158,7 @@ describe("Internal Endpoints", () => {
       });
 
       const res = await request(app)
-        .get("/health/bulk")
+        .get("/internal/health/bulk")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -168,6 +168,42 @@ describe("Internal Endpoints", () => {
       expect(item.hasValidated).toBe(true);
       expect(item.hasDrafted).toBe(true);
       expect(item.totalKits).toBe(2);
+    });
+  });
+
+  describe("GET /internal/email-data/:orgId", () => {
+    it("returns email data for org with kit", async () => {
+      const org = await insertTestOrganization({
+        orgId: "org_email_1",
+        name: "Email Org",
+      });
+      await insertTestMediaKit({
+        orgId: "org_email_1",
+        organizationId: org.id,
+        title: "Email Kit",
+        mdxPageContent: "# Email Content",
+        status: "validated",
+      });
+
+      const res = await request(app)
+        .get("/internal/email-data/org_email_1")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.companyName).toBe("Email Org");
+      expect(res.body.status).toBe("validated");
+      expect(res.body.title).toBe("Email Kit");
+      expect(res.body.content).toBe("# Email Content");
+      expect(res.body.contentType).toBe("mdx");
+    });
+
+    it("returns nulls for unknown org", async () => {
+      const res = await request(app)
+        .get("/internal/email-data/org_unknown")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.companyName).toBeNull();
     });
   });
 });

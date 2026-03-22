@@ -39,7 +39,7 @@ describe("Media Kits", () => {
     await closeDb();
   });
 
-  describe("GET /media-kit", () => {
+  describe("GET /media-kits", () => {
     it("lists kits by org_id", async () => {
       const org = await insertTestOrganization({ orgId: "org_1" });
       await insertTestMediaKit({
@@ -56,7 +56,7 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .get("/media-kit?org_id=org_1")
+        .get("/media-kits?org_id=org_1")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -85,7 +85,7 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .get("/media-kit?org_id=org_2")
+        .get("/media-kits?org_id=org_2")
         .set(headers);
 
       expect(res.status).toBe(200);
@@ -94,13 +94,13 @@ describe("Media Kits", () => {
     });
 
     it("requires organization filter", async () => {
-      const res = await request(app).get("/media-kit").set(headers);
+      const res = await request(app).get("/media-kits").set(headers);
 
       expect(res.status).toBe(400);
     });
   });
 
-  describe("GET /media-kit/:id", () => {
+  describe("GET /media-kits/:id", () => {
     it("returns kit by id", async () => {
       const org = await insertTestOrganization({ orgId: "org_3" });
       const kit = await insertTestMediaKit({
@@ -110,7 +110,7 @@ describe("Media Kits", () => {
         status: "drafted",
       });
 
-      const res = await request(app).get(`/media-kit/${kit.id}`).set(headers);
+      const res = await request(app).get(`/media-kits/${kit.id}`).set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(kit.id);
@@ -119,14 +119,14 @@ describe("Media Kits", () => {
 
     it("returns 404 for unknown id", async () => {
       const res = await request(app)
-        .get("/media-kit/00000000-0000-0000-0000-000000000000")
+        .get("/media-kits/00000000-0000-0000-0000-000000000000")
         .set(headers);
 
       expect(res.status).toBe(404);
     });
   });
 
-  describe("POST /update-mdx", () => {
+  describe("PATCH /media-kits/:id/mdx", () => {
     it("updates mdx content", async () => {
       const org = await insertTestOrganization({ orgId: "org_4" });
       const kit = await insertTestMediaKit({
@@ -136,16 +136,16 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/update-mdx")
+        .patch(`/media-kits/${kit.id}/mdx`)
         .set(headers)
-        .send({ mediaKitId: kit.id, mdxContent: "# New Content" });
+        .send({ mdxContent: "# New Content" });
 
       expect(res.status).toBe(200);
       expect(res.body.mdxPageContent).toBe("# New Content");
     });
   });
 
-  describe("POST /update-status", () => {
+  describe("PATCH /media-kits/:id/status", () => {
     it("updates status to denied with reason", async () => {
       const org = await insertTestOrganization({ orgId: "org_5" });
       const kit = await insertTestMediaKit({
@@ -155,10 +155,9 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/update-status")
+        .patch(`/media-kits/${kit.id}/status`)
         .set(headers)
         .send({
-          mediaKitId: kit.id,
           status: "denied",
           denialReason: "Needs more info",
         });
@@ -169,7 +168,7 @@ describe("Media Kits", () => {
     });
   });
 
-  describe("POST /edit-media-kit", () => {
+  describe("POST /media-kits", () => {
     it("creates generating copy from validated kit", async () => {
       const org = await insertTestOrganization({ orgId: "org_6" });
       const kit = await insertTestMediaKit({
@@ -181,7 +180,7 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set(headers)
         .send({
           mediaKitId: kit.id,
@@ -205,7 +204,7 @@ describe("Media Kits", () => {
       });
 
       await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set({
           ...headers,
           "x-run-id": "00000000-0000-0000-0000-000000000001",
@@ -223,27 +222,26 @@ describe("Media Kits", () => {
       );
     });
 
-    it("creates new kit from scratch when orgId has no existing kit", async () => {
-      await insertTestOrganization({ orgId: "org_new" });
+    it("creates new kit from scratch when org has no existing kit", async () => {
+      await insertTestOrganization({ orgId: "test-org-id" });
 
       const res = await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set(headers)
         .send({
-          orgId: "org_new",
           instruction: "Create my first press kit",
         });
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("generating");
-      expect(res.body.orgId).toBe("org_new");
+      expect(res.body.orgId).toBe("test-org-id");
       expect(res.body.parentMediaKitId).toBeNull();
     });
 
-    it("finds and edits latest validated kit when orgId is provided", async () => {
-      const org = await insertTestOrganization({ orgId: "org_by_orgid" });
+    it("finds and edits latest validated kit via org header", async () => {
+      const org = await insertTestOrganization({ orgId: "test-org-id" });
       const kit = await insertTestMediaKit({
-        orgId: "org_by_orgid",
+        orgId: "test-org-id",
         organizationId: org.id,
         title: "Existing Kit",
         mdxPageContent: "# Old",
@@ -251,10 +249,9 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set(headers)
         .send({
-          orgId: "org_by_orgid",
           instruction: "Update it",
         });
 
@@ -264,34 +261,24 @@ describe("Media Kits", () => {
       expect(res.body.mdxPageContent).toBe("# Old");
     });
 
-    it("reuses existing generating kit when orgId is provided", async () => {
-      const org = await insertTestOrganization({ orgId: "org_gen" });
+    it("reuses existing generating kit via org header", async () => {
+      const org = await insertTestOrganization({ orgId: "test-org-id" });
       const kit = await insertTestMediaKit({
-        orgId: "org_gen",
+        orgId: "test-org-id",
         organizationId: org.id,
         status: "generating",
       });
 
       const res = await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set(headers)
         .send({
-          orgId: "org_gen",
           instruction: "Try again",
         });
 
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(kit.id);
       expect(res.body.status).toBe("generating");
-    });
-
-    it("returns 400 when neither mediaKitId nor orgId is provided", async () => {
-      const res = await request(app)
-        .post("/edit-media-kit")
-        .set(headers)
-        .send({ instruction: "Do something" });
-
-      expect(res.status).toBe(400);
     });
 
     it("updates timestamp for already generating kit", async () => {
@@ -303,7 +290,7 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/edit-media-kit")
+        .post("/media-kits")
         .set(headers)
         .send({ mediaKitId: kit.id, instruction: "Try again" });
 
@@ -313,7 +300,7 @@ describe("Media Kits", () => {
     });
   });
 
-  describe("POST /validate", () => {
+  describe("POST /media-kits/:id/validate", () => {
     it("validates kit and archives previous", async () => {
       const org = await insertTestOrganization({ orgId: "org_8" });
       const validatedKit = await insertTestMediaKit({
@@ -330,23 +317,23 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/validate")
+        .post(`/media-kits/${draftedKit.id}/validate`)
         .set(headers)
-        .send({ mediaKitId: draftedKit.id });
+        .send({});
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("validated");
 
       // Check old kit is archived
       const oldKitRes = await request(app)
-        .get(`/media-kit/${validatedKit.id}`)
+        .get(`/media-kits/${validatedKit.id}`)
         .set(headers);
 
       expect(oldKitRes.body.status).toBe("archived");
     });
   });
 
-  describe("POST /cancel-draft", () => {
+  describe("POST /media-kits/:id/cancel", () => {
     it("cancels draft and restores parent", async () => {
       const org = await insertTestOrganization({ orgId: "org_9" });
       const parent = await insertTestMediaKit({
@@ -372,16 +359,16 @@ describe("Media Kits", () => {
       });
 
       const res = await request(app)
-        .post("/cancel-draft")
+        .post(`/media-kits/${draft.id}/cancel`)
         .set(headers)
-        .send({ mediaKitId: draft.id });
+        .send({});
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
 
       // Parent should be restored to drafted
       const parentRes = await request(app)
-        .get(`/media-kit/${parent.id}`)
+        .get(`/media-kits/${parent.id}`)
         .set(headers);
 
       expect(parentRes.body.status).toBe("drafted");

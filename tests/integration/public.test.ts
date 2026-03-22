@@ -74,36 +74,4 @@ describe("Public Endpoints", () => {
       expect(res.status).toBe(200);
     });
   });
-
-  describe("GET /email-data/press-kit/:orgId", () => {
-    it("returns email data for org with kit", async () => {
-      const org = await insertTestOrganization({
-        orgId: "org_email_1",
-        name: "Email Org",
-      });
-      await insertTestMediaKit({
-        orgId: "org_email_1",
-        organizationId: org.id,
-        title: "Email Kit",
-        mdxPageContent: "# Email Content",
-        status: "validated",
-      });
-
-      const res = await request(app).get("/email-data/press-kit/org_email_1");
-
-      expect(res.status).toBe(200);
-      expect(res.body.companyName).toBe("Email Org");
-      expect(res.body.status).toBe("validated");
-      expect(res.body.title).toBe("Email Kit");
-      expect(res.body.content).toBe("# Email Content");
-      expect(res.body.contentType).toBe("mdx");
-    });
-
-    it("returns nulls for unknown org", async () => {
-      const res = await request(app).get("/email-data/press-kit/org_unknown");
-
-      expect(res.status).toBe(200);
-      expect(res.body.companyName).toBeNull();
-    });
-  });
 });

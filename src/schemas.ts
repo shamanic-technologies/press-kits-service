@@ -79,37 +79,31 @@ export const MediaKitListResponseSchema = z
 
 export const UpdateMdxRequestSchema = z
   .object({
-    mediaKitId: z.string().uuid(),
     mdxContent: z.string(),
   })
   .openapi("UpdateMdxRequest");
 
 export const UpdateStatusRequestSchema = z
   .object({
-    mediaKitId: z.string().uuid(),
     status: MediaKitStatusEnum,
     denialReason: z.string().optional(),
   })
   .openapi("UpdateStatusRequest");
 
-export const EditMediaKitRequestSchema = z
+export const CreateMediaKitRequestSchema = z
   .object({
     mediaKitId: z.string().uuid().optional(),
-    orgId: z.string().optional(),
     instruction: z.string(),
     organizationUrl: z.string().optional(),
   })
-  .refine((data) => data.mediaKitId || data.orgId, {
-    message: "Either mediaKitId or orgId is required",
-  })
-  .openapi("EditMediaKitRequest");
+  .openapi("CreateMediaKitRequest");
 
 export const ValidateMediaKitRequestSchema = z
-  .object({ mediaKitId: z.string().uuid() })
+  .object({})
   .openapi("ValidateMediaKitRequest");
 
 export const CancelDraftRequestSchema = z
-  .object({ mediaKitId: z.string().uuid() })
+  .object({})
   .openapi("CancelDraftRequest");
 
 // --- Public Schemas ---
@@ -256,7 +250,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/organizations/share-token/{orgId}",
+  path: "/organizations/{orgId}/share-token",
   summary: "Get share token",
   tags: ["Organizations"],
   request: { params: z.object({ orgId: z.string() }) },
@@ -280,7 +274,7 @@ registry.registerPath({
 // Media Kits
 registry.registerPath({
   method: "get",
-  path: "/media-kit",
+  path: "/media-kits",
   summary: "List media kits",
   tags: ["Media Kits"],
   request: {
@@ -297,7 +291,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/media-kit/{id}",
+  path: "/media-kits/{id}",
   summary: "Get media kit by ID",
   tags: ["Media Kits"],
   request: { params: z.object({ id: z.string().uuid() }) },
@@ -308,56 +302,66 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/update-mdx",
+  method: "patch",
+  path: "/media-kits/{id}/mdx",
   summary: "Update MDX content",
   tags: ["Media Kits"],
-  request: { body: { content: { "application/json": { schema: UpdateMdxRequestSchema } } } },
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: UpdateMdxRequestSchema } } },
+  },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/update-status",
+  method: "patch",
+  path: "/media-kits/{id}/status",
   summary: "Update media kit status",
   tags: ["Media Kits"],
-  request: { body: { content: { "application/json": { schema: UpdateStatusRequestSchema } } } },
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: UpdateStatusRequestSchema } } },
+  },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
 
 registry.registerPath({
   method: "post",
-  path: "/edit-media-kit",
+  path: "/media-kits",
   summary: "Create or edit a media kit",
-  description: "Idempotent create-or-edit. Pass mediaKitId to edit a specific kit, or orgId to find the latest active kit for that org (or create a new one if none exists). At least one of mediaKitId or orgId is required.",
+  description: "Idempotent create-or-edit. Uses x-org-id header to find the latest active kit for the org, or creates a new one if none exists. Optionally pass mediaKitId in the body to target a specific kit.",
   tags: ["Media Kits"],
-  request: { body: { content: { "application/json": { schema: EditMediaKitRequestSchema } } } },
+  request: { body: { content: { "application/json": { schema: CreateMediaKitRequestSchema } } } },
   responses: {
-    200: { description: "Generation initiated", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    200: { description: "Media kit created or updated", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    404: { description: "Media kit not found (when mediaKitId specified)", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
 
 registry.registerPath({
   method: "post",
-  path: "/validate",
+  path: "/media-kits/{id}/validate",
   summary: "Validate media kit",
   tags: ["Media Kits"],
-  request: { body: { content: { "application/json": { schema: ValidateMediaKitRequestSchema } } } },
+  request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
     200: { description: "Validated", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
 
 registry.registerPath({
   method: "post",
-  path: "/cancel-draft",
+  path: "/media-kits/{id}/cancel",
   summary: "Cancel draft media kit",
   tags: ["Media Kits"],
-  request: { body: { content: { "application/json": { schema: CancelDraftRequestSchema } } } },
+  request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
     200: { description: "Draft cancelled", content: { "application/json": { schema: z.object({ success: z.boolean() }) } } },
   },
@@ -373,29 +377,6 @@ registry.registerPath({
   responses: {
     200: { description: "Public media kit", content: { "application/json": { schema: PublicMediaKitResponseSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/public-media-kit/{token}",
-  summary: "Get public media kit (legacy)",
-  tags: ["Public"],
-  request: { params: z.object({ token: z.string() }) },
-  responses: {
-    200: { description: "Public media kit", content: { "application/json": { schema: PublicMediaKitResponseSchema } } },
-    404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/email-data/press-kit/{orgId}",
-  summary: "Get press kit data for email templates",
-  tags: ["Public"],
-  request: { params: z.object({ orgId: z.string() }) },
-  responses: {
-    200: { description: "Email data", content: { "application/json": { schema: EmailDataResponseSchema } } },
   },
 });
 
@@ -430,10 +411,9 @@ registry.registerPath({
 // Internal
 registry.registerPath({
   method: "get",
-  path: "/internal/media-kit/by-org/{orgId}",
-  summary: "Get latest media kit by org",
+  path: "/internal/media-kits/current",
+  summary: "Get latest media kit for org (from x-org-id header)",
   tags: ["Internal"],
-  request: { params: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Media kit", content: { "application/json": { schema: MediaKitResponseSchema.nullable() } } },
   },
@@ -441,10 +421,9 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/internal/generation-data",
-  summary: "Get data for generation workflow",
+  path: "/internal/media-kits/generation-data",
+  summary: "Get data for generation workflow (org from x-org-id header)",
   tags: ["Internal"],
-  request: { query: z.object({ orgId: z.string() }) },
   responses: {
     200: { description: "Generation data", content: { "application/json": { schema: GenerationDataResponseSchema } } },
   },
@@ -452,7 +431,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/internal/upsert-generation-result",
+  path: "/internal/media-kits/generation-result",
   summary: "Upsert generation result (workflow callback)",
   tags: ["Internal"],
   request: { body: { content: { "application/json": { schema: UpsertGenerationResultRequestSchema } } } },
@@ -463,8 +442,8 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/clients-media-kits-need-update",
-  summary: "Get orgs with stale kits",
+  path: "/internal/media-kits/stale",
+  summary: "Get orgs with stale kits (>1 month old)",
   tags: ["Internal"],
   responses: {
     200: { description: "Stale kits", content: { "application/json": { schema: StaleKitsResponseSchema } } },
@@ -473,7 +452,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/media-kit-setup",
+  path: "/internal/media-kits/setup",
   summary: "Get setup status for all orgs",
   tags: ["Internal"],
   responses: {
@@ -483,10 +462,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/health/bulk",
+  path: "/internal/health/bulk",
   summary: "Bulk health check per org",
   tags: ["Internal"],
   responses: {
     200: { description: "Bulk health", content: { "application/json": { schema: HealthBulkResponseSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/email-data/{orgId}",
+  summary: "Get press kit data for email templates",
+  tags: ["Internal"],
+  request: { params: z.object({ orgId: z.string() }) },
+  responses: {
+    200: { description: "Email data", content: { "application/json": { schema: EmailDataResponseSchema } } },
   },
 });

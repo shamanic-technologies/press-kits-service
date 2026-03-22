@@ -246,26 +246,17 @@
       "UpdateMdxRequest": {
         "type": "object",
         "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "mdxContent": {
             "type": "string"
           }
         },
         "required": [
-          "mediaKitId",
           "mdxContent"
         ]
       },
       "UpdateStatusRequest": {
         "type": "object",
         "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "status": {
             "$ref": "#/components/schemas/MediaKitStatus"
           },
@@ -274,19 +265,15 @@
           }
         },
         "required": [
-          "mediaKitId",
           "status"
         ]
       },
-      "EditMediaKitRequest": {
+      "CreateMediaKitRequest": {
         "type": "object",
         "properties": {
           "mediaKitId": {
             "type": "string",
             "format": "uuid"
-          },
-          "orgId": {
-            "type": "string"
           },
           "instruction": {
             "type": "string"
@@ -297,30 +284,6 @@
         },
         "required": [
           "instruction"
-        ]
-      },
-      "ValidateMediaKitRequest": {
-        "type": "object",
-        "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "mediaKitId"
-        ]
-      },
-      "CancelDraftRequest": {
-        "type": "object",
-        "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "mediaKitId"
         ]
       },
       "PublicMediaKitResponse": {
@@ -361,49 +324,6 @@
         "required": [
           "organization",
           "mediaKit"
-        ]
-      },
-      "EmailDataResponse": {
-        "type": "object",
-        "properties": {
-          "companyName": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MediaKitStatus"
-              },
-              {
-                "nullable": true
-              }
-            ]
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "pressKitUrl": {
-            "type": "string",
-            "nullable": true
-          },
-          "content": {
-            "type": "string",
-            "nullable": true
-          },
-          "contentType": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "companyName",
-          "status",
-          "title",
-          "pressKitUrl",
-          "content",
-          "contentType"
         ]
       },
       "AdminOrganization": {
@@ -659,6 +579,49 @@
         "required": [
           "organizations"
         ]
+      },
+      "EmailDataResponse": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitStatus"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "pressKitUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "companyName",
+          "status",
+          "title",
+          "pressKitUrl",
+          "content",
+          "contentType"
+        ]
       }
     },
     "parameters": {},
@@ -720,7 +683,7 @@
         }
       }
     },
-    "/organizations/share-token/{orgId}": {
+    "/organizations/{orgId}/share-token": {
       "get": {
         "summary": "Get share token",
         "tags": [
@@ -790,7 +753,7 @@
         }
       }
     },
-    "/media-kit": {
+    "/media-kits": {
       "get": {
         "summary": "List media kits",
         "tags": [
@@ -834,9 +797,47 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "Create or edit a media kit",
+        "description": "Idempotent create-or-edit. Uses x-org-id header to find the latest active kit for the org, or creates a new one if none exists. Optionally pass mediaKitId in the body to target a specific kit.",
+        "tags": [
+          "Media Kits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMediaKitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Media kit created or updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Media kit not found (when mediaKitId specified)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/media-kit/{id}": {
+    "/media-kits/{id}": {
       "get": {
         "summary": "Get media kit by ID",
         "tags": [
@@ -877,11 +878,22 @@
         }
       }
     },
-    "/update-mdx": {
-      "post": {
+    "/media-kits/{id}/mdx": {
+      "patch": {
         "summary": "Update MDX content",
         "tags": [
           "Media Kits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
         ],
         "requestBody": {
           "content": {
@@ -902,15 +914,36 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/update-status": {
-      "post": {
+    "/media-kits/{id}/status": {
+      "patch": {
         "summary": "Update media kit status",
         "tags": [
           "Media Kits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
         ],
         "requestBody": {
           "content": {
@@ -931,33 +964,13 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/edit-media-kit": {
-      "post": {
-        "summary": "Create or edit a media kit",
-        "description": "Idempotent create-or-edit. Pass mediaKitId to edit a specific kit, or orgId to find the latest active kit for that org (or create a new one if none exists). At least one of mediaKitId or orgId is required.",
-        "tags": [
-          "Media Kits"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EditMediaKitRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Generation initiated",
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MediaKitResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -965,21 +978,23 @@
         }
       }
     },
-    "/validate": {
+    "/media-kits/{id}/validate": {
       "post": {
         "summary": "Validate media kit",
         "tags": [
           "Media Kits"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateMediaKitRequest"
-              }
-            }
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Validated",
@@ -990,25 +1005,37 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/cancel-draft": {
+    "/media-kits/{id}/cancel": {
       "post": {
         "summary": "Cancel draft media kit",
         "tags": [
           "Media Kits"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CancelDraftRequest"
-              }
-            }
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Draft cancelled",
@@ -1065,76 +1092,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/public-media-kit/{token}": {
-      "get": {
-        "summary": "Get public media kit (legacy)",
-        "tags": [
-          "Public"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "token",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Public media kit",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicMediaKitResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/email-data/press-kit/{orgId}": {
-      "get": {
-        "summary": "Get press kit data for email templates",
-        "tags": [
-          "Public"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailDataResponse"
                 }
               }
             }
@@ -1239,21 +1196,11 @@
         }
       }
     },
-    "/internal/media-kit/by-org/{orgId}": {
+    "/internal/media-kits/current": {
       "get": {
-        "summary": "Get latest media kit by org",
+        "summary": "Get latest media kit for org (from x-org-id header)",
         "tags": [
           "Internal"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "path"
-          }
         ],
         "responses": {
           "200": {
@@ -1276,21 +1223,11 @@
         }
       }
     },
-    "/internal/generation-data": {
+    "/internal/media-kits/generation-data": {
       "get": {
-        "summary": "Get data for generation workflow",
+        "summary": "Get data for generation workflow (org from x-org-id header)",
         "tags": [
           "Internal"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "query"
-          }
         ],
         "responses": {
           "200": {
@@ -1306,7 +1243,7 @@
         }
       }
     },
-    "/internal/upsert-generation-result": {
+    "/internal/media-kits/generation-result": {
       "post": {
         "summary": "Upsert generation result (workflow callback)",
         "tags": [
@@ -1335,9 +1272,9 @@
         }
       }
     },
-    "/clients-media-kits-need-update": {
+    "/internal/media-kits/stale": {
       "get": {
-        "summary": "Get orgs with stale kits",
+        "summary": "Get orgs with stale kits (>1 month old)",
         "tags": [
           "Internal"
         ],
@@ -1355,7 +1292,7 @@
         }
       }
     },
-    "/media-kit-setup": {
+    "/internal/media-kits/setup": {
       "get": {
         "summary": "Get setup status for all orgs",
         "tags": [
@@ -1375,7 +1312,7 @@
         }
       }
     },
-    "/health/bulk": {
+    "/internal/health/bulk": {
       "get": {
         "summary": "Bulk health check per org",
         "tags": [
@@ -1388,6 +1325,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthBulkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/email-data/{orgId}": {
+      "get": {
+        "summary": "Get press kit data for email templates",
+        "tags": [
+          "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailDataResponse"
                 }
               }
             }
