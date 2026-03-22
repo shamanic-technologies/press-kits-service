@@ -12,7 +12,6 @@ import {
 import { createRun } from "../lib/runs-client.js";
 import { executeWorkflowByName } from "../lib/windmill-client.js";
 import { sendEmail } from "../lib/email-client.js";
-import { authorizeBilling } from "../lib/billing-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
@@ -137,20 +136,6 @@ router.post("/edit-media-kit", async (req, res) => {
   try {
     const body = EditMediaKitRequestSchema.parse(req.body);
     const ctx = getContextHeaders(req);
-
-    // Authorize billing before proceeding
-    const authResult = await authorizeBilling(
-      [{ costName: "press-kit-generation", quantity: 1 }],
-      ctx
-    );
-    if (!authResult.sufficient) {
-      res.status(402).json({
-        error: "Insufficient credits",
-        balance_cents: authResult.balance_cents,
-        required_cents: authResult.required_cents,
-      });
-      return;
-    }
 
     // Fetch current kit
     const currentKit = await db.query.mediaKits.findFirst({
