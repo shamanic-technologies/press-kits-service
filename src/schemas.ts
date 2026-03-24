@@ -68,6 +68,7 @@ export const MediaKitResponseSchema = z
     workflowName: z.string().nullable(),
     brandId: z.string().nullable(),
     campaignId: z.string().nullable(),
+    featureSlug: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })

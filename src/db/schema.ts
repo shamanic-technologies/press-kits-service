@@ -50,6 +50,7 @@ export const mediaKits = pgTable(
     workflowName: varchar("workflow_name"),
     brandId: varchar("brand_id"),
     campaignId: varchar("campaign_id"),
+    featureSlug: varchar("feature_slug"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
