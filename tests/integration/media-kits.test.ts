@@ -328,6 +328,22 @@ describe("Media Kits", () => {
       expect(res.body.status).toBe("generating");
     });
 
+    it("stores x-feature-slug header on new kit", async () => {
+      await insertTestOrganization({ orgId: "org_feat" });
+
+      const res = await request(app)
+        .post("/media-kits")
+        .set({
+          ...headers,
+          "x-org-id": "org_feat",
+          "x-feature-slug": "press-kit-v2",
+        })
+        .send({ instruction: "Create kit with feature slug" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.featureSlug).toBe("press-kit-v2");
+    });
+
     it("updates timestamp for already generating kit", async () => {
       const org = await insertTestOrganization({ orgId: "org_7" });
       const kit = await insertTestMediaKit({

@@ -202,6 +202,10 @@
             "type": "string",
             "nullable": true
           },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string"
           },
@@ -225,6 +229,7 @@
           "workflowName",
           "brandId",
           "campaignId",
+          "featureSlug",
           "createdAt",
           "updatedAt"
         ]

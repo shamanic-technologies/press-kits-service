@@ -9,6 +9,7 @@ declare global {
       workflowName?: string;
       brandId?: string;
       campaignId?: string;
+      featureSlug?: string;
     }
   }
 }
@@ -36,6 +37,7 @@ export function requireIdentityHeaders(req: Request, res: Response, next: NextFu
   req.workflowName = req.headers["x-workflow-name"] as string | undefined;
   req.brandId = req.headers["x-brand-id"] as string | undefined;
   req.campaignId = req.headers["x-campaign-id"] as string | undefined;
+  req.featureSlug = req.headers["x-feature-slug"] as string | undefined;
   next();
 }
 
@@ -46,6 +48,7 @@ export interface ContextHeaders {
   workflowName?: string;
   brandId?: string;
   campaignId?: string;
+  featureSlug?: string;
 }
 
 export function getContextHeaders(req: Request): ContextHeaders {
@@ -56,6 +59,7 @@ export function getContextHeaders(req: Request): ContextHeaders {
     workflowName: req.workflowName,
     brandId: req.brandId,
     campaignId: req.campaignId,
+    featureSlug: req.featureSlug,
   };
 }
 
@@ -68,5 +72,6 @@ export function buildForwardHeaders(ctx: ContextHeaders): Record<string, string>
   if (ctx.workflowName) headers["x-workflow-name"] = ctx.workflowName;
   if (ctx.brandId) headers["x-brand-id"] = ctx.brandId;
   if (ctx.campaignId) headers["x-campaign-id"] = ctx.campaignId;
+  if (ctx.featureSlug) headers["x-feature-slug"] = ctx.featureSlug;
   return headers;
 }

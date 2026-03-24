@@ -40,6 +40,7 @@ export async function insertTestMediaKit(
       status: data.status,
       denialReason: data.denialReason ?? null,
       campaignId: data.campaignId ?? null,
+      featureSlug: data.featureSlug ?? null,
     })
     .returning();
   return kit;
