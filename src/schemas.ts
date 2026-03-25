@@ -172,7 +172,7 @@ export const GenerationDataResponseSchema = z
 
 export const UpsertGenerationResultRequestSchema = z
   .object({
-    orgId: z.string(),
+    orgId: z.string().optional(),
     mdxContent: z.string(),
     title: z.string().optional(),
     iconUrl: z.string().optional(),

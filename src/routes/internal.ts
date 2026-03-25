@@ -75,6 +75,7 @@ router.get("/internal/media-kits/generation-data", async (req, res) => {
 router.post("/internal/media-kits/generation-result", async (req, res) => {
   try {
     const body = UpsertGenerationResultRequestSchema.parse(req.body);
+    const orgId = body.orgId ?? req.orgId;
 
     const result = await sql`
       SELECT * FROM upsert_generating_media_kit_by_org(
@@ -83,7 +84,7 @@ router.post("/internal/media-kits/generation-result", async (req, res) => {
           title: body.title ?? null,
           icon_url: body.iconUrl ?? null,
         })}::jsonb,
-        ${body.orgId}::varchar
+        ${orgId}::varchar
       )
     `;
 

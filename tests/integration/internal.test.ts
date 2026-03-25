@@ -114,6 +114,26 @@ describe("Internal Endpoints", () => {
       expect(res.body.mdx_page_content).toBe("# Generated Content");
       expect(res.body.title).toBe("Generated Kit");
     });
+
+    it("uses x-org-id header when orgId omitted from body", async () => {
+      await insertTestOrganization({ orgId: "test-org-id" });
+      await insertTestMediaKit({
+        orgId: "test-org-id",
+        status: "generating",
+      });
+
+      const res = await request(app)
+        .post("/internal/media-kits/generation-result")
+        .set(headers)
+        .send({
+          mdxContent: "# Header Org Content",
+          title: "Header Kit",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("drafted");
+      expect(res.body.mdx_page_content).toBe("# Header Org Content");
+    });
   });
 
   describe("GET /internal/media-kits/setup", () => {
