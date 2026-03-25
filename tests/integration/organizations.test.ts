@@ -30,6 +30,27 @@ describe("Organizations", () => {
       expect(res.body.id).toBeDefined();
     });
 
+    it("uses x-org-id header when orgId omitted from body", async () => {
+      const res = await request(app)
+        .post("/organizations")
+        .set(headers)
+        .send({ name: "Header Org" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.orgId).toBe("test-org-id");
+      expect(res.body.name).toBe("Header Org");
+    });
+
+    it("prefers body orgId over header", async () => {
+      const res = await request(app)
+        .post("/organizations")
+        .set(headers)
+        .send({ orgId: "body_org", name: "Body Org" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.orgId).toBe("body_org");
+    });
+
     it("upserts existing organization", async () => {
       await request(app)
         .post("/organizations")

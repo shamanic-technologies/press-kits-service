@@ -70,10 +70,7 @@
           "name": {
             "type": "string"
           }
-        },
-        "required": [
-          "orgId"
-        ]
+        }
       },
       "ShareTokenResponse": {
         "type": "object",

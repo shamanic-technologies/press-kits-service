@@ -10,11 +10,12 @@ const router = Router();
 router.post("/organizations", async (req, res) => {
   try {
     const body = UpsertOrganizationRequestSchema.parse(req.body);
+    const orgId = body.orgId ?? req.orgId;
 
     const [org] = await db
       .insert(organizations)
       .values({
-        orgId: body.orgId,
+        orgId,
         name: body.name ?? null,
       })
       .onConflictDoUpdate({
