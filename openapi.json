@@ -460,7 +460,6 @@
           }
         },
         "required": [
-          "orgId",
           "mdxContent"
         ]
       },

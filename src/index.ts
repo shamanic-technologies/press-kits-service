@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/node";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./db/index.js";
 import { requireApiKey, requireIdentityHeaders } from "./middleware/auth.js";
+import { trackRun } from "./middleware/run-tracking.js";
 import { deployWorkflows } from "./lib/windmill-client.js";
 import { deployTemplates } from "./lib/email-client.js";
 
@@ -27,9 +28,10 @@ app.use(healthRoutes);
 app.use(publicRoutes);
 app.use(openapiRoutes);
 
-// Protected routes (require API key + identity headers)
+// Protected routes (require API key + identity headers + run tracking)
 app.use(requireApiKey);
 app.use(requireIdentityHeaders);
+app.use(trackRun);
 app.use(organizationsRoutes);
 app.use(mediaKitsRoutes);
 app.use(adminRoutes);
