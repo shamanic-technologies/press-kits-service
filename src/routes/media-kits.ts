@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, and, inArray, ilike, sql as drizzleSql, desc } from "drizzle-orm";
 import { db, sql } from "../db/index.js";
-import { mediaKits, mediaKitInstructions } from "../db/schema.js";
+import { mediaKits, mediaKitInstructions, organizations } from "../db/schema.js";
 import {
   UpdateMdxRequestSchema,
   UpdateStatusRequestSchema,
@@ -175,12 +175,23 @@ router.post("/media-kits", async (req, res) => {
 
     let generatingKit;
 
+    // Ensure org record exists (idempotent upsert for shareToken)
+    const [org] = await db
+      .insert(organizations)
+      .values({ orgId })
+      .onConflictDoUpdate({
+        target: organizations.orgId,
+        set: { updatedAt: new Date() },
+      })
+      .returning();
+
     if (!currentKit) {
       // First kit for this org — create from scratch
       const [newKit] = await db
         .insert(mediaKits)
         .values({
           orgId,
+          organizationId: org.id,
           status: "generating",
           workflowName: ctx.workflowName ?? null,
           brandId: ctx.brandId ?? null,
@@ -202,7 +213,7 @@ router.post("/media-kits", async (req, res) => {
         .values({
           clientOrganizationId: currentKit.clientOrganizationId,
           orgId: currentKit.orgId,
-          organizationId: currentKit.organizationId,
+          organizationId: currentKit.organizationId ?? org.id,
           title: currentKit.title,
           iconUrl: currentKit.iconUrl,
           mdxPageContent: currentKit.mdxPageContent,

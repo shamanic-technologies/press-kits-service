@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import { createTestApp, getAuthHeaders } from "../helpers/test-app.js";
+import { eq } from "drizzle-orm";
+import { db } from "../../src/db/index.js";
+import { organizations } from "../../src/db/schema.js";
 import {
   cleanTestData,
   insertTestOrganization,
@@ -283,6 +286,24 @@ describe("Media Kits", () => {
       expect(res.body.status).toBe("generating");
       expect(res.body.orgId).toBe("test-org-id");
       expect(res.body.parentMediaKitId).toBeNull();
+    });
+
+    it("auto-creates org with shareToken when org does not exist", async () => {
+      const res = await request(app)
+        .post("/media-kits")
+        .set({ ...headers, "x-org-id": "org_auto_created" })
+        .send({ instruction: "Build a press kit" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.orgId).toBe("org_auto_created");
+      expect(res.body.organizationId).toBeDefined();
+
+      // Verify org was created with a shareToken
+      const org = await db.query.organizations.findFirst({
+        where: eq(organizations.orgId, "org_auto_created"),
+      });
+      expect(org).toBeDefined();
+      expect(org!.shareToken).toBeDefined();
     });
 
     it("finds and edits latest validated kit via org header", async () => {
