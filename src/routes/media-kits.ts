@@ -1,13 +1,11 @@
 import { Router } from "express";
 import { eq, and, inArray, ilike, sql as drizzleSql, desc } from "drizzle-orm";
 import { db, sql } from "../db/index.js";
-import { mediaKits, mediaKitInstructions, organizations } from "../db/schema.js";
+import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import {
   UpdateMdxRequestSchema,
   UpdateStatusRequestSchema,
   CreateMediaKitRequestSchema,
-  ValidateMediaKitRequestSchema,
-  CancelDraftRequestSchema,
 } from "../schemas.js";
 import { createRun } from "../lib/runs-client.js";
 import { executeWorkflowByName } from "../lib/windmill-client.js";
@@ -23,12 +21,11 @@ const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
 router.get("/media-kits", async (req, res) => {
   try {
     const orgIdParam = req.query.org_id as string | undefined;
-    const organizationId = req.query.organization_id as string | undefined;
     const titleFilter = req.query.title as string | undefined;
     const campaignIdFilter = req.query.campaign_id as string | undefined;
 
-    if (!orgIdParam && !organizationId && !campaignIdFilter) {
-      res.status(400).json({ error: "org_id, organization_id, or campaign_id required" });
+    if (!orgIdParam && !campaignIdFilter) {
+      res.status(400).json({ error: "org_id or campaign_id required" });
       return;
     }
 
@@ -38,9 +35,6 @@ router.get("/media-kits", async (req, res) => {
 
     if (orgIdParam) {
       conditions.push(eq(mediaKits.orgId, orgIdParam));
-    }
-    if (organizationId) {
-      conditions.push(eq(mediaKits.organizationId, organizationId));
     }
     if (titleFilter) {
       conditions.push(ilike(mediaKits.title, `%${titleFilter}%`));
@@ -137,8 +131,6 @@ router.patch("/media-kits/:id/status", async (req, res) => {
 });
 
 // POST /media-kits — create or edit a media kit
-// Idempotent: finds the latest active kit for the org (from x-org-id header),
-// or creates a new one if none exists. Optionally pass mediaKitId to target a specific kit.
 router.post("/media-kits", async (req, res) => {
   try {
     const body = CreateMediaKitRequestSchema.parse(req.body);
@@ -175,23 +167,12 @@ router.post("/media-kits", async (req, res) => {
 
     let generatingKit;
 
-    // Ensure org record exists (idempotent upsert for shareToken)
-    const [org] = await db
-      .insert(organizations)
-      .values({ orgId })
-      .onConflictDoUpdate({
-        target: organizations.orgId,
-        set: { updatedAt: new Date() },
-      })
-      .returning();
-
     if (!currentKit) {
       // First kit for this org — create from scratch
       const [newKit] = await db
         .insert(mediaKits)
         .values({
           orgId,
-          organizationId: org.id,
           status: "generating",
           workflowName: ctx.workflowName ?? null,
           brandId: ctx.brandId ?? null,
@@ -211,21 +192,16 @@ router.post("/media-kits", async (req, res) => {
       const [newKit] = await db
         .insert(mediaKits)
         .values({
-          clientOrganizationId: currentKit.clientOrganizationId,
           orgId: currentKit.orgId,
-          organizationId: currentKit.organizationId ?? org.id,
           title: currentKit.title,
           iconUrl: currentKit.iconUrl,
           mdxPageContent: currentKit.mdxPageContent,
-          jsxPageContent: currentKit.jsxPageContent,
-          jsonPageContent: currentKit.jsonPageContent,
-          notionPageContent: currentKit.notionPageContent,
           parentMediaKitId: currentKit.id,
           status: "generating",
           workflowName: ctx.workflowName ?? null,
-          brandId: ctx.brandId ?? null,
-          campaignId: ctx.campaignId ?? null,
-          featureSlug: ctx.featureSlug ?? null,
+          brandId: ctx.brandId ?? currentKit.brandId,
+          campaignId: ctx.campaignId ?? currentKit.campaignId,
+          featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
         })
         .returning();
       generatingKit = newKit;
@@ -262,31 +238,29 @@ router.post("/media-kits", async (req, res) => {
 
     // Create run + trigger workflow (fire-and-forget)
     const kitOrgId = generatingKit.orgId;
-    if (kitOrgId) {
-      const brandDomain = ctx.brandId
-        ? getBrandDomain(ctx.brandId, ctx).catch(() => null)
-        : Promise.resolve(null);
+    const brandDomain = ctx.brandId
+      ? getBrandDomain(ctx.brandId, ctx).catch(() => null)
+      : Promise.resolve(null);
 
-      Promise.all([
-        createRun({
+    Promise.all([
+      createRun({
+        orgId: kitOrgId,
+        userId: req.userId,
+        serviceName: "press-kits-service",
+        taskName: "generate-press-kit",
+        parentRunId: req.runId,
+        ctx,
+      }),
+      brandDomain,
+    ])
+      .then(([run, domain]) =>
+        executeWorkflowByName("generate-press-kit", {
           orgId: kitOrgId,
-          userId: req.userId,
-          serviceName: "press-kits-service",
-          taskName: "generate-press-kit",
-          parentRunId: req.runId,
-          ctx,
-        }),
-        brandDomain,
-      ])
-        .then(([run, domain]) =>
-          executeWorkflowByName("generate-press-kit", {
-            orgId: kitOrgId,
-            mediaKitId: generatingKit.id,
-            organizationUrl: domain,
-          }, run.id, ctx)
-        )
-        .catch((err) => console.error("Workflow trigger failed:", err));
-    }
+          mediaKitId: generatingKit.id,
+          organizationUrl: domain,
+        }, run.id, ctx)
+      )
+      .catch((err) => console.error("Workflow trigger failed:", err));
 
     res.json(generatingKit);
   } catch (err) {

@@ -44,16 +44,26 @@
             "type": "string",
             "format": "uuid"
           },
-          "clientOrganizationId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
           "orgId": {
+            "type": "string"
+          },
+          "brandId": {
             "type": "string",
             "nullable": true
           },
-          "organizationId": {
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "workflowName": {
+            "type": "string",
+            "nullable": true
+          },
+          "shareToken": {
             "type": "string",
             "nullable": true,
             "format": "uuid"
@@ -70,17 +80,6 @@
             "type": "string",
             "nullable": true
           },
-          "jsxPageContent": {
-            "type": "string",
-            "nullable": true
-          },
-          "jsonPageContent": {
-            "nullable": true
-          },
-          "notionPageContent": {
-            "type": "string",
-            "nullable": true
-          },
           "parentMediaKitId": {
             "type": "string",
             "nullable": true,
@@ -93,22 +92,6 @@
             "type": "string",
             "nullable": true
           },
-          "workflowName": {
-            "type": "string",
-            "nullable": true
-          },
-          "brandId": {
-            "type": "string",
-            "nullable": true
-          },
-          "campaignId": {
-            "type": "string",
-            "nullable": true
-          },
-          "featureSlug": {
-            "type": "string",
-            "nullable": true
-          },
           "createdAt": {
             "type": "string"
           },
@@ -118,21 +101,18 @@
         },
         "required": [
           "id",
-          "clientOrganizationId",
           "orgId",
-          "organizationId",
-          "title",
-          "iconUrl",
-          "mdxPageContent",
-          "jsxPageContent",
-          "notionPageContent",
-          "parentMediaKitId",
-          "status",
-          "denialReason",
-          "workflowName",
           "brandId",
           "campaignId",
           "featureSlug",
+          "workflowName",
+          "shareToken",
+          "title",
+          "iconUrl",
+          "mdxPageContent",
+          "parentMediaKitId",
+          "status",
+          "denialReason",
           "createdAt",
           "updatedAt"
         ]
@@ -205,93 +185,12 @@
       "PublicMediaKitResponse": {
         "type": "object",
         "properties": {
-          "organization": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "name": {
-                "type": "string",
-                "nullable": true
-              },
-              "orgId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "name",
-              "orgId"
-            ]
-          },
           "mediaKit": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MediaKitResponse"
-              },
-              {
-                "nullable": true
-              }
-            ]
+            "$ref": "#/components/schemas/MediaKitResponse"
           }
         },
         "required": [
-          "organization",
           "mediaKit"
-        ]
-      },
-      "AdminOrganization": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "shareToken": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "mediaKitCount": {
-            "type": "number"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "name",
-          "shareToken",
-          "mediaKitCount",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "AdminOrganizationListResponse": {
-        "type": "object",
-        "properties": {
-          "organizations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminOrganization"
-            }
-          }
-        },
-        "required": [
-          "organizations"
         ]
       },
       "GenerationDataResponse": {
@@ -380,40 +279,6 @@
           "mdxContent"
         ]
       },
-      "StaleKitOrg": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastUpdated": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "orgId",
-          "name",
-          "lastUpdated"
-        ]
-      },
-      "StaleKitsResponse": {
-        "type": "object",
-        "properties": {
-          "organizations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StaleKitOrg"
-            }
-          }
-        },
-        "required": [
-          "organizations"
-        ]
-      },
       "MediaKitSetup": {
         "type": "object",
         "properties": {
@@ -498,10 +363,6 @@
       "EmailDataResponse": {
         "type": "object",
         "properties": {
-          "companyName": {
-            "type": "string",
-            "nullable": true
-          },
           "status": {
             "allOf": [
               {
@@ -523,19 +384,13 @@
           "content": {
             "type": "string",
             "nullable": true
-          },
-          "contentType": {
-            "type": "string",
-            "nullable": true
           }
         },
         "required": [
-          "companyName",
           "status",
           "title",
           "pressKitUrl",
-          "content",
-          "contentType"
+          "content"
         ]
       }
     },
@@ -582,14 +437,6 @@
             },
             "required": false,
             "name": "org_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "organization_id",
             "in": "query"
           },
           {
@@ -923,9 +770,9 @@
         }
       }
     },
-    "/admin/organizations": {
+    "/admin/media-kits": {
       "get": {
-        "summary": "List organizations with kit counts",
+        "summary": "List all media kits",
         "tags": [
           "Admin"
         ],
@@ -941,11 +788,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Admin org list",
+            "description": "Admin kit list",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminOrganizationListResponse"
+                  "$ref": "#/components/schemas/MediaKitListResponse"
                 }
               }
             }
@@ -953,9 +800,9 @@
         }
       }
     },
-    "/admin/organizations/{id}": {
+    "/admin/media-kits/{id}": {
       "delete": {
-        "summary": "Delete organization",
+        "summary": "Delete media kit",
         "tags": [
           "Admin"
         ],
@@ -968,14 +815,6 @@
             "required": true,
             "name": "id",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "confirmName",
-            "in": "query"
           }
         ],
         "responses": {
@@ -993,16 +832,6 @@
                   "required": [
                     "success"
                   ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1098,7 +927,7 @@
     },
     "/internal/media-kits/stale": {
       "get": {
-        "summary": "Get orgs with stale kits (>1 month old)",
+        "summary": "Get stale media kits (>1 month old)",
         "tags": [
           "Internal"
         ],
@@ -1108,7 +937,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StaleKitsResponse"
+                  "$ref": "#/components/schemas/MediaKitListResponse"
                 }
               }
             }

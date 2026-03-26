@@ -1,46 +1,29 @@
 import { db, sql } from "../../src/db/index.js";
-import { organizations, mediaKits, mediaKitInstructions } from "../../src/db/schema.js";
-import type { NewOrganization, NewMediaKit, NewMediaKitInstruction } from "../../src/db/schema.js";
+import { mediaKits, mediaKitInstructions } from "../../src/db/schema.js";
+import type { NewMediaKit, NewMediaKitInstruction } from "../../src/db/schema.js";
 
 export async function cleanTestData(): Promise<void> {
   await db.delete(mediaKitInstructions);
   await db.delete(mediaKits);
-  await db.delete(organizations);
-}
-
-export async function insertTestOrganization(
-  data: Partial<NewOrganization> & { orgId: string }
-) {
-  const [org] = await db
-    .insert(organizations)
-    .values({
-      orgId: data.orgId,
-      name: data.name ?? null,
-    })
-    .returning();
-  return org;
 }
 
 export async function insertTestMediaKit(
-  data: Partial<NewMediaKit> & { status: NewMediaKit["status"] }
+  data: Partial<NewMediaKit> & { orgId: string; status: NewMediaKit["status"] }
 ) {
   const [kit] = await db
     .insert(mediaKits)
     .values({
-      clientOrganizationId: data.clientOrganizationId ?? null,
-      orgId: data.orgId ?? null,
-      organizationId: data.organizationId ?? null,
+      orgId: data.orgId,
+      brandId: data.brandId ?? null,
+      campaignId: data.campaignId ?? null,
+      featureSlug: data.featureSlug ?? null,
+      workflowName: data.workflowName ?? null,
       title: data.title ?? null,
       iconUrl: data.iconUrl ?? null,
       mdxPageContent: data.mdxPageContent ?? null,
-      jsxPageContent: data.jsxPageContent ?? null,
-      jsonPageContent: data.jsonPageContent ?? null,
-      notionPageContent: data.notionPageContent ?? null,
       parentMediaKitId: data.parentMediaKitId ?? null,
       status: data.status,
       denialReason: data.denialReason ?? null,
-      campaignId: data.campaignId ?? null,
-      featureSlug: data.featureSlug ?? null,
     })
     .returning();
   return kit;
