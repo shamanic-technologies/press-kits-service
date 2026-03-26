@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, and, inArray, ilike, sql as drizzleSql, desc } from "drizzle-orm";
-import { db, sql } from "../db/index.js";
+import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull } from "drizzle-orm";
+import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import {
   UpdateMdxRequestSchema,
@@ -105,30 +105,48 @@ router.patch("/media-kits/:id/mdx", async (req, res) => {
   }
 });
 
-// PATCH /media-kits/:id/status
+// PATCH /media-kits/:id/status — update status (replaces update_media_kit_status SQL function)
 router.patch("/media-kits/:id/status", async (req, res) => {
   try {
     const body = UpdateStatusRequestSchema.parse(req.body);
 
-    const result = await sql`
-      SELECT * FROM update_media_kit_status(
-        ${req.params.id}::uuid,
-        ${body.status}::text,
-        ${body.denialReason ?? null}::text
-      )
-    `;
+    const [updated] = await db
+      .update(mediaKits)
+      .set({
+        status: body.status,
+        denialReason: body.denialReason ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(mediaKits.id, req.params.id))
+      .returning();
 
-    if (result.length === 0) {
+    if (!updated) {
       res.status(404).json({ error: "Media kit not found" });
       return;
     }
 
-    res.json(result[0]);
+    res.json(updated);
   } catch (err) {
     console.error("PATCH /media-kits/:id/status error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });
+
+/** Build scope conditions for orgId + optional brandId + campaignId */
+function buildScopeConditions(orgId: string, brandId?: string | null, campaignId?: string | null) {
+  const conditions = [eq(mediaKits.orgId, orgId)];
+  if (brandId) {
+    conditions.push(eq(mediaKits.brandId, brandId));
+  } else {
+    conditions.push(isNull(mediaKits.brandId));
+  }
+  if (campaignId) {
+    conditions.push(eq(mediaKits.campaignId, campaignId));
+  } else {
+    conditions.push(isNull(mediaKits.campaignId));
+  }
+  return conditions;
+}
 
 // POST /media-kits — create or edit a media kit
 router.post("/media-kits", async (req, res) => {
@@ -137,7 +155,7 @@ router.post("/media-kits", async (req, res) => {
     const ctx = getContextHeaders(req);
     const orgId = req.orgId;
 
-    // Resolve the current kit: by ID or by org lookup
+    // Resolve the current kit: by ID or by org+brand+campaign scope
     let currentKit;
     if (body.mediaKitId) {
       currentKit = await db.query.mediaKits.findFirst({
@@ -148,10 +166,11 @@ router.post("/media-kits", async (req, res) => {
         return;
       }
     } else {
-      // Find latest active kit for this org
+      // Find latest active kit scoped by org + brand + campaign
+      const scopeConditions = buildScopeConditions(orgId, ctx.brandId, ctx.campaignId);
       currentKit = await db.query.mediaKits.findFirst({
         where: and(
-          eq(mediaKits.orgId, orgId),
+          ...scopeConditions,
           inArray(mediaKits.status, ["validated", "drafted", "generating"]),
         ),
         orderBy: [
@@ -168,7 +187,7 @@ router.post("/media-kits", async (req, res) => {
     let generatingKit;
 
     if (!currentKit) {
-      // First kit for this org — create from scratch
+      // First kit for this scope — create from scratch
       const [newKit] = await db
         .insert(mediaKits)
         .values({
@@ -269,32 +288,58 @@ router.post("/media-kits", async (req, res) => {
   }
 });
 
-// POST /media-kits/:id/validate
+// POST /media-kits/:id/validate — replaces validate_media_kit_with_archive SQL function
 router.post("/media-kits/:id/validate", async (req, res) => {
   try {
     const ctx = getContextHeaders(req);
 
-    const result = await sql`
-      SELECT * FROM validate_media_kit_with_archive(${req.params.id}::uuid)
-    `;
+    const kit = await db.transaction(async (tx) => {
+      // Find the kit to validate
+      const [target] = await tx
+        .select()
+        .from(mediaKits)
+        .where(eq(mediaKits.id, req.params.id));
 
-    if (result.length === 0) {
+      if (!target) return null;
+
+      // Archive existing validated kits in same scope (org + campaign)
+      const archiveConditions = [
+        eq(mediaKits.orgId, target.orgId),
+        eq(mediaKits.status, "validated"),
+        drizzleSql`${mediaKits.id} != ${target.id}`,
+      ];
+      if (target.campaignId) {
+        archiveConditions.push(eq(mediaKits.campaignId, target.campaignId));
+      } else {
+        archiveConditions.push(isNull(mediaKits.campaignId));
+      }
+
+      await tx
+        .update(mediaKits)
+        .set({ status: "archived", updatedAt: new Date() })
+        .where(and(...archiveConditions));
+
+      // Set this kit to validated
+      const [validated] = await tx
+        .update(mediaKits)
+        .set({ status: "validated", updatedAt: new Date() })
+        .where(eq(mediaKits.id, target.id))
+        .returning();
+
+      return validated;
+    });
+
+    if (!kit) {
       res.status(404).json({ error: "Media kit not found" });
       return;
     }
 
-    const kit = result[0];
-
     // Send press_kit_ready email (fire-and-forget)
-    if (kit.org_id) {
-      sendEmail({
-        eventType: "press_kit_ready",
-        orgId: kit.org_id as string,
-        metadata: {
-          title: (kit.title as string) || "Press Kit",
-        },
-      }, ctx).catch((err) => console.error("Email send failed:", err));
-    }
+    sendEmail({
+      eventType: "press_kit_ready",
+      orgId: kit.orgId,
+      metadata: { title: kit.title || "Press Kit" },
+    }, ctx).catch((err) => console.error("Email send failed:", err));
 
     res.json(kit);
   } catch (err) {
@@ -303,14 +348,38 @@ router.post("/media-kits/:id/validate", async (req, res) => {
   }
 });
 
-// POST /media-kits/:id/cancel
+// POST /media-kits/:id/cancel — replaces cancel_draft_media_kit SQL function
 router.post("/media-kits/:id/cancel", async (req, res) => {
   try {
-    const result = await sql`
-      SELECT * FROM cancel_draft_media_kit(${req.params.id}::uuid)
-    `;
+    const result = await db.transaction(async (tx) => {
+      // Find the kit to cancel
+      const [target] = await tx
+        .select()
+        .from(mediaKits)
+        .where(eq(mediaKits.id, req.params.id));
 
-    res.json({ success: true, result: result[0] ?? null });
+      if (!target) return null;
+
+      // If it has a parent, restore the parent to "drafted"
+      if (target.parentMediaKitId) {
+        await tx
+          .update(mediaKits)
+          .set({ status: "drafted", updatedAt: new Date() })
+          .where(eq(mediaKits.id, target.parentMediaKitId));
+      }
+
+      // Delete the cancelled kit (cascade deletes instructions)
+      await tx.delete(mediaKits).where(eq(mediaKits.id, target.id));
+
+      return { parentId: target.parentMediaKitId };
+    });
+
+    if (!result) {
+      res.status(404).json({ error: "Media kit not found" });
+      return;
+    }
+
+    res.json({ success: true });
   } catch (err) {
     console.error("POST /media-kits/:id/cancel error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });

@@ -55,10 +55,10 @@ const PRESS_KIT_GENERATION_WORKFLOW = {
         config: {
           service: "press-kits",
           method: "GET",
-          path: "/internal/generation-data",
+          path: "/internal/media-kits/generation-data",
         },
         inputMapping: {
-          "query.orgId": "$ref:flow_input.orgId",
+          "query.media_kit_id": "$ref:flow_input.mediaKitId",
         },
       },
       {
@@ -81,10 +81,10 @@ const PRESS_KIT_GENERATION_WORKFLOW = {
         config: {
           service: "press-kits",
           method: "POST",
-          path: "/internal/upsert-generation-result",
+          path: "/internal/media-kits/generation-result",
         },
         inputMapping: {
-          "body.orgId": "$ref:flow_input.orgId",
+          "body.mediaKitId": "$ref:flow_input.mediaKitId",
           "body.mdxContent": "$ref:generate-mdx.output.bodyHtml",
           "body.title": "$ref:generate-mdx.output.title",
         },

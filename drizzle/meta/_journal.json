@@ -43,6 +43,13 @@
       "when": 1774951200000,
       "tag": "0005_drop_organizations_table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774987200000,
+      "tag": "0006_drop_sql_functions",
+      "breakpoints": true
     }
   ]
 }
