@@ -262,6 +262,10 @@
       "UpsertGenerationResultRequest": {
         "type": "object",
         "properties": {
+          "mediaKitId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "orgId": {
             "type": "string"
           },
@@ -277,87 +281,6 @@
         },
         "required": [
           "mdxContent"
-        ]
-      },
-      "MediaKitSetup": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string"
-          },
-          "hasKit": {
-            "type": "boolean"
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MediaKitStatus"
-              },
-              {
-                "nullable": true
-              }
-            ]
-          },
-          "isSetup": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "orgId",
-          "hasKit",
-          "status",
-          "isSetup"
-        ]
-      },
-      "MediaKitSetupListResponse": {
-        "type": "object",
-        "properties": {
-          "organizations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaKitSetup"
-            }
-          }
-        },
-        "required": [
-          "organizations"
-        ]
-      },
-      "HealthBulkItem": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string"
-          },
-          "hasValidated": {
-            "type": "boolean"
-          },
-          "hasDrafted": {
-            "type": "boolean"
-          },
-          "totalKits": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "orgId",
-          "hasValidated",
-          "hasDrafted",
-          "totalKits"
-        ]
-      },
-      "HealthBulkResponse": {
-        "type": "object",
-        "properties": {
-          "organizations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HealthBulkItem"
-            }
-          }
-        },
-        "required": [
-          "organizations"
         ]
       },
       "EmailDataResponse": {
@@ -471,7 +394,7 @@
       },
       "post": {
         "summary": "Create or edit a media kit",
-        "description": "Idempotent create-or-edit. Uses x-org-id header to find the latest active kit for the org, or creates a new one if none exists. Optionally pass mediaKitId in the body to target a specific kit.",
+        "description": "Idempotent create-or-edit. Scoped by x-org-id + x-brand-id + x-campaign-id headers. Finds the latest active kit in that scope, or creates a new one. Optionally pass mediaKitId in the body to target a specific kit.",
         "tags": [
           "Media Kits"
         ],
@@ -851,9 +774,27 @@
     },
     "/internal/media-kits/current": {
       "get": {
-        "summary": "Get latest media kit for org (from x-org-id header)",
+        "summary": "Get latest media kit for scope (x-org-id + optional brand_id/campaign_id query params)",
         "tags": [
           "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "brand_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "campaign_id",
+            "in": "query"
+          }
         ],
         "responses": {
           "200": {
@@ -878,9 +819,20 @@
     },
     "/internal/media-kits/generation-data": {
       "get": {
-        "summary": "Get data for generation workflow (org from x-org-id header)",
+        "summary": "Get data for generation workflow",
         "tags": [
           "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "media_kit_id",
+            "in": "query"
+          }
         ],
         "responses": {
           "200": {
@@ -918,66 +870,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MediaKitResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/media-kits/stale": {
-      "get": {
-        "summary": "Get stale media kits (>1 month old)",
-        "tags": [
-          "Internal"
-        ],
-        "responses": {
-          "200": {
-            "description": "Stale kits",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MediaKitListResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/media-kits/setup": {
-      "get": {
-        "summary": "Get setup status for all orgs",
-        "tags": [
-          "Internal"
-        ],
-        "responses": {
-          "200": {
-            "description": "Setup status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MediaKitSetupListResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/health/bulk": {
-      "get": {
-        "summary": "Bulk health check per org",
-        "tags": [
-          "Internal"
-        ],
-        "responses": {
-          "200": {
-            "description": "Bulk health",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthBulkResponse"
                 }
               }
             }

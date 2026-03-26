@@ -100,38 +100,13 @@ export const GenerationDataResponseSchema = z
 
 export const UpsertGenerationResultRequestSchema = z
   .object({
+    mediaKitId: z.string().uuid().optional(),
     orgId: z.string().optional(),
     mdxContent: z.string(),
     title: z.string().optional(),
     iconUrl: z.string().optional(),
   })
   .openapi("UpsertGenerationResultRequest");
-
-export const MediaKitSetupSchema = z
-  .object({
-    orgId: z.string(),
-    hasKit: z.boolean(),
-    status: MediaKitStatusEnum.nullable(),
-    isSetup: z.boolean(),
-  })
-  .openapi("MediaKitSetup");
-
-export const MediaKitSetupListResponseSchema = z
-  .object({ organizations: z.array(MediaKitSetupSchema) })
-  .openapi("MediaKitSetupListResponse");
-
-export const HealthBulkItemSchema = z
-  .object({
-    orgId: z.string(),
-    hasValidated: z.boolean(),
-    hasDrafted: z.boolean(),
-    totalKits: z.number(),
-  })
-  .openapi("HealthBulkItem");
-
-export const HealthBulkResponseSchema = z
-  .object({ organizations: z.array(HealthBulkItemSchema) })
-  .openapi("HealthBulkResponse");
 
 const HealthResponseSchema = z
   .object({ status: z.string(), service: z.string() })
@@ -214,7 +189,7 @@ registry.registerPath({
   method: "post",
   path: "/media-kits",
   summary: "Create or edit a media kit",
-  description: "Idempotent create-or-edit. Uses x-org-id header to find the latest active kit for the org, or creates a new one if none exists. Optionally pass mediaKitId in the body to target a specific kit.",
+  description: "Idempotent create-or-edit. Scoped by x-org-id + x-brand-id + x-campaign-id headers. Finds the latest active kit in that scope, or creates a new one. Optionally pass mediaKitId in the body to target a specific kit.",
   tags: ["Media Kits"],
   request: { body: { content: { "application/json": { schema: CreateMediaKitRequestSchema } } } },
   responses: {
@@ -287,8 +262,14 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/internal/media-kits/current",
-  summary: "Get latest media kit for org (from x-org-id header)",
+  summary: "Get latest media kit for scope (x-org-id + optional brand_id/campaign_id query params)",
   tags: ["Internal"],
+  request: {
+    query: z.object({
+      brand_id: z.string().optional(),
+      campaign_id: z.string().optional(),
+    }),
+  },
   responses: {
     200: { description: "Media kit", content: { "application/json": { schema: MediaKitResponseSchema.nullable() } } },
   },
@@ -297,8 +278,13 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/internal/media-kits/generation-data",
-  summary: "Get data for generation workflow (org from x-org-id header)",
+  summary: "Get data for generation workflow",
   tags: ["Internal"],
+  request: {
+    query: z.object({
+      media_kit_id: z.string().uuid().optional(),
+    }),
+  },
   responses: {
     200: { description: "Generation data", content: { "application/json": { schema: GenerationDataResponseSchema } } },
   },
@@ -312,36 +298,6 @@ registry.registerPath({
   request: { body: { content: { "application/json": { schema: UpsertGenerationResultRequestSchema } } } },
   responses: {
     200: { description: "Upserted", content: { "application/json": { schema: MediaKitResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/media-kits/stale",
-  summary: "Get stale media kits (>1 month old)",
-  tags: ["Internal"],
-  responses: {
-    200: { description: "Stale kits", content: { "application/json": { schema: MediaKitListResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/media-kits/setup",
-  summary: "Get setup status for all orgs",
-  tags: ["Internal"],
-  responses: {
-    200: { description: "Setup status", content: { "application/json": { schema: MediaKitSetupListResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/internal/health/bulk",
-  summary: "Bulk health check per org",
-  tags: ["Internal"],
-  responses: {
-    200: { description: "Bulk health", content: { "application/json": { schema: HealthBulkResponseSchema } } },
   },
 });
 

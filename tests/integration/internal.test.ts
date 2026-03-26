@@ -45,6 +45,29 @@ describe("Internal", () => {
       expect(res.status).toBe(200);
       expect(res.body).toBeNull();
     });
+
+    it("filters by brand_id and campaign_id query params", async () => {
+      await insertTestMediaKit({
+        orgId: "test-org-id",
+        brandId: "brand-1",
+        campaignId: "camp-1",
+        title: "Scoped Kit",
+        status: "validated",
+      });
+      await insertTestMediaKit({
+        orgId: "test-org-id",
+        brandId: "brand-2",
+        title: "Other Kit",
+        status: "validated",
+      });
+
+      const res = await request(app)
+        .get("/internal/media-kits/current?brand_id=brand-1&campaign_id=camp-1")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.title).toBe("Scoped Kit");
+    });
   });
 
   describe("GET /internal/media-kits/generation-data", () => {
@@ -60,7 +83,7 @@ describe("Internal", () => {
         instructionType: "initial",
       });
 
-      const denied = await insertTestMediaKit({
+      await insertTestMediaKit({
         orgId: "test-org-id",
         status: "denied",
         denialReason: "Too informal",
@@ -78,11 +101,32 @@ describe("Internal", () => {
       expect(res.body.feedbacks).toHaveLength(1);
       expect(res.body.feedbacks[0].denialReason).toBe("Too informal");
     });
+
+    it("accepts media_kit_id query param", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "test-org-id",
+        status: "generating",
+      });
+
+      await insertTestInstruction({
+        mediaKitId: kit.id,
+        instruction: "Targeted instruction",
+        instructionType: "initial",
+      });
+
+      const res = await request(app)
+        .get(`/internal/media-kits/generation-data?media_kit_id=${kit.id}`)
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.currentKit.id).toBe(kit.id);
+      expect(res.body.instructions).toHaveLength(1);
+    });
   });
 
   describe("POST /internal/media-kits/generation-result", () => {
     it("upserts generating kit to drafted with content", async () => {
-      await insertTestMediaKit({
+      const kit = await insertTestMediaKit({
         orgId: "test-org-id",
         status: "generating",
       });
@@ -97,8 +141,27 @@ describe("Internal", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("drafted");
-      expect(res.body.mdx_page_content).toBe("# Generated Content");
+      expect(res.body.mdxPageContent).toBe("# Generated Content");
       expect(res.body.title).toBe("My Press Kit");
+    });
+
+    it("accepts mediaKitId to target specific kit", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "test-org-id",
+        status: "generating",
+      });
+
+      const res = await request(app)
+        .post("/internal/media-kits/generation-result")
+        .set(headers)
+        .send({
+          mediaKitId: kit.id,
+          mdxContent: "# Targeted Content",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(kit.id);
+      expect(res.body.status).toBe("drafted");
     });
 
     it("returns 404 when no generating kit exists", async () => {
@@ -108,59 +171,6 @@ describe("Internal", () => {
         .send({ mdxContent: "# Content" });
 
       expect(res.status).toBe(404);
-    });
-  });
-
-  describe("GET /internal/media-kits/stale", () => {
-    it("returns stale kits", async () => {
-      // This test just verifies the endpoint works
-      const res = await request(app)
-        .get("/internal/media-kits/stale")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      expect(res.body.mediaKits).toBeDefined();
-    });
-  });
-
-  describe("GET /internal/media-kits/setup", () => {
-    it("returns setup status per org", async () => {
-      await insertTestMediaKit({ orgId: "org_setup_1", status: "validated" });
-      await insertTestMediaKit({ orgId: "org_setup_2", status: "generating" });
-
-      const res = await request(app)
-        .get("/internal/media-kits/setup")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      const orgs = res.body.organizations;
-      expect(orgs.length).toBeGreaterThanOrEqual(2);
-
-      const org1 = orgs.find((o: { orgId: string }) => o.orgId === "org_setup_1");
-      expect(org1).toBeDefined();
-      expect(org1.isSetup).toBe(true);
-
-      const org2 = orgs.find((o: { orgId: string }) => o.orgId === "org_setup_2");
-      expect(org2).toBeDefined();
-      expect(org2.isSetup).toBe(false);
-    });
-  });
-
-  describe("GET /internal/health/bulk", () => {
-    it("returns health per org", async () => {
-      await insertTestMediaKit({ orgId: "org_health", status: "validated" });
-      await insertTestMediaKit({ orgId: "org_health", status: "drafted" });
-
-      const res = await request(app)
-        .get("/internal/health/bulk")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      const org = res.body.organizations.find((o: { orgId: string }) => o.orgId === "org_health");
-      expect(org).toBeDefined();
-      expect(org.hasValidated).toBe(true);
-      expect(org.hasDrafted).toBe(true);
-      expect(org.totalKits).toBe(2);
     });
   });
 
