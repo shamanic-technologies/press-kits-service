@@ -66,6 +66,17 @@ describe("Organizations", () => {
       expect(res.body.name).toBe("New Name");
     });
 
+    it("accepts name: null", async () => {
+      const res = await request(app)
+        .post("/organizations")
+        .set(headers)
+        .send({ orgId: "org_null_name", name: null });
+
+      expect(res.status).toBe(200);
+      expect(res.body.orgId).toBe("org_null_name");
+      expect(res.body.name).toBeNull();
+    });
+
     it("requires auth", async () => {
       const res = await request(app)
         .post("/organizations")

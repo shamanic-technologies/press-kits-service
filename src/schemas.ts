@@ -18,7 +18,7 @@ const MediaKitStatusEnum = z.enum(mediaKitStatusValues).openapi("MediaKitStatus"
 export const UpsertOrganizationRequestSchema = z
   .object({
     orgId: z.string().optional(),
-    name: z.string().optional(),
+    name: z.string().nullable().optional(),
   })
   .openapi("UpsertOrganizationRequest");
 
