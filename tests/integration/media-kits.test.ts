@@ -24,10 +24,6 @@ vi.mock("../../src/lib/email-client.js", () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../src/lib/brand-client.js", () => ({
-  getBrandDomain: vi.fn().mockResolvedValue("example.com"),
-}));
-
 const app = createTestApp();
 const headers = getAuthHeaders();
 
