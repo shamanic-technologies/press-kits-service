@@ -13,14 +13,7 @@ const ErrorResponseSchema = z
 const mediaKitStatusValues = ["drafted", "generating", "validated", "denied", "archived"] as const;
 const MediaKitStatusEnum = z.enum(mediaKitStatusValues).openapi("MediaKitStatus");
 
-// --- Organization Schemas ---
-
-export const UpsertOrganizationRequestSchema = z
-  .object({
-    orgId: z.string().optional(),
-    name: z.string().nullable().optional(),
-  })
-  .openapi("UpsertOrganizationRequest");
+// --- Organization Schemas (internal, used by admin/public routes) ---
 
 export const OrganizationResponseSchema = z
   .object({
@@ -32,21 +25,6 @@ export const OrganizationResponseSchema = z
     updatedAt: z.string(),
   })
   .openapi("OrganizationResponse");
-
-export const ShareTokenResponseSchema = z
-  .object({ shareToken: z.string().uuid() })
-  .openapi("ShareTokenResponse");
-
-export const OrganizationExistsResponseSchema = z
-  .object({
-    organizations: z.array(
-      z.object({
-        orgId: z.string(),
-        exists: z.boolean(),
-      })
-    ),
-  })
-  .openapi("OrganizationExistsResponse");
 
 // --- Media Kit Schemas ---
 
@@ -233,41 +211,6 @@ registry.registerPath({
   tags: ["Health"],
   responses: {
     200: { description: "Service is healthy", content: { "application/json": { schema: HealthResponseSchema } } },
-  },
-});
-
-// Organizations
-registry.registerPath({
-  method: "post",
-  path: "/organizations",
-  summary: "Upsert organization",
-  tags: ["Organizations"],
-  request: { body: { content: { "application/json": { schema: UpsertOrganizationRequestSchema } } } },
-  responses: {
-    200: { description: "Organization upserted", content: { "application/json": { schema: OrganizationResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/organizations/{orgId}/share-token",
-  summary: "Get share token",
-  tags: ["Organizations"],
-  request: { params: z.object({ orgId: z.string() }) },
-  responses: {
-    200: { description: "Share token", content: { "application/json": { schema: ShareTokenResponseSchema } } },
-    404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/organizations/exists",
-  summary: "Batch check organization existence",
-  tags: ["Organizations"],
-  request: { query: z.object({ orgIds: z.string() }) },
-  responses: {
-    200: { description: "Existence check", content: { "application/json": { schema: OrganizationExistsResponseSchema } } },
   },
 });
 

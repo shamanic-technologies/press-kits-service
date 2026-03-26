@@ -27,101 +27,6 @@
           "service"
         ]
       },
-      "OrganizationResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "shareToken": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "name",
-          "shareToken",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UpsertOrganizationRequest": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "ShareTokenResponse": {
-        "type": "object",
-        "properties": {
-          "shareToken": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "shareToken"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
-      "OrganizationExistsResponse": {
-        "type": "object",
-        "properties": {
-          "organizations": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "orgId": {
-                  "type": "string"
-                },
-                "exists": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "orgId",
-                "exists"
-              ]
-            }
-          }
-        },
-        "required": [
-          "organizations"
-        ]
-      },
       "MediaKitStatus": {
         "type": "string",
         "enum": [
@@ -244,6 +149,17 @@
         },
         "required": [
           "mediaKits"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "UpdateMdxRequest": {
@@ -646,105 +562,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/organizations": {
-      "post": {
-        "summary": "Upsert organization",
-        "tags": [
-          "Organizations"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertOrganizationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Organization upserted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/organizations/{orgId}/share-token": {
-      "get": {
-        "summary": "Get share token",
-        "tags": [
-          "Organizations"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "orgId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Share token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShareTokenResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/organizations/exists": {
-      "get": {
-        "summary": "Batch check organization existence",
-        "tags": [
-          "Organizations"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "orgIds",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Existence check",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganizationExistsResponse"
                 }
               }
             }

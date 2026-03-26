@@ -10,7 +10,6 @@ import { deployWorkflows } from "./lib/windmill-client.js";
 import { deployTemplates } from "./lib/email-client.js";
 
 import healthRoutes from "./routes/health.js";
-import organizationsRoutes from "./routes/organizations.js";
 import mediaKitsRoutes from "./routes/media-kits.js";
 import publicRoutes from "./routes/public.js";
 import adminRoutes from "./routes/admin.js";
@@ -32,7 +31,6 @@ app.use(openapiRoutes);
 app.use(requireApiKey);
 app.use(requireIdentityHeaders);
 app.use(trackRun);
-app.use(organizationsRoutes);
 app.use(mediaKitsRoutes);
 app.use(adminRoutes);
 app.use(internalRoutes);

@@ -24,7 +24,7 @@ describe("Run Tracking Middleware", () => {
   });
 
   it("creates a run for every authenticated request", async () => {
-    await request(app).get("/organizations/exists?orgIds=foo").set(headers);
+    await request(app).get("/media-kits?org_id=foo").set(headers);
 
     expect(mockCreateRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -37,7 +37,7 @@ describe("Run Tracking Middleware", () => {
   });
 
   it("closes the run on response finish", async () => {
-    await request(app).get("/organizations/exists?orgIds=foo").set(headers);
+    await request(app).get("/media-kits?org_id=foo").set(headers);
 
     // Wait for async finish handler
     await new Promise((r) => setTimeout(r, 50));
@@ -53,7 +53,7 @@ describe("Run Tracking Middleware", () => {
     mockCreateRun.mockRejectedValue(new Error("connection refused"));
 
     const res = await request(app)
-      .get("/organizations/exists?orgIds=foo")
+      .get("/media-kits?org_id=foo")
       .set(headers);
 
     expect(res.status).toBe(502);

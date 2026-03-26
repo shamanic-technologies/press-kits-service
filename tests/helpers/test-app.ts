@@ -2,7 +2,6 @@ import express from "express";
 import { requireApiKey, requireIdentityHeaders } from "../../src/middleware/auth.js";
 import { trackRun } from "../../src/middleware/run-tracking.js";
 import healthRoutes from "../../src/routes/health.js";
-import organizationsRoutes from "../../src/routes/organizations.js";
 import mediaKitsRoutes from "../../src/routes/media-kits.js";
 import publicRoutes from "../../src/routes/public.js";
 import adminRoutes from "../../src/routes/admin.js";
@@ -20,7 +19,6 @@ export function createTestApp(): express.Express {
   app.use(requireApiKey);
   app.use(requireIdentityHeaders);
   app.use(trackRun);
-  app.use(organizationsRoutes);
   app.use(mediaKitsRoutes);
   app.use(adminRoutes);
   app.use(internalRoutes);
