@@ -1,16 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { createTestApp } from "../helpers/test-app.js";
-import {
-  cleanTestData,
-  insertTestOrganization,
-  insertTestMediaKit,
-  closeDb,
-} from "../helpers/test-db.js";
+import { cleanTestData, insertTestMediaKit, closeDb } from "../helpers/test-db.js";
 
 const app = createTestApp();
 
-describe("Public Endpoints", () => {
+describe("Public", () => {
   beforeEach(async () => {
     await cleanTestData();
   });
@@ -21,56 +16,29 @@ describe("Public Endpoints", () => {
   });
 
   describe("GET /public/:token", () => {
-    it("returns validated kit by share token", async () => {
-      const org = await insertTestOrganization({
-        orgId: "org_pub_1",
-        name: "Public Org",
-      });
-      await insertTestMediaKit({
-        orgId: "org_pub_1",
-        organizationId: org.id,
+    it("returns media kit by share token", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_pub",
         title: "Public Kit",
         mdxPageContent: "# Hello",
         status: "validated",
       });
 
-      const res = await request(app).get(`/public/${org.shareToken}`);
+      const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.organization.name).toBe("Public Org");
-      expect(res.body.mediaKit).not.toBeNull();
+      expect(res.body.mediaKit.id).toBe(kit.id);
       expect(res.body.mediaKit.title).toBe("Public Kit");
     });
 
-    it("falls back to drafted if no validated", async () => {
-      const org = await insertTestOrganization({ orgId: "org_pub_2" });
-      await insertTestMediaKit({
-        orgId: "org_pub_2",
-        organizationId: org.id,
-        title: "Draft Kit",
-        status: "drafted",
-      });
-
-      const res = await request(app).get(`/public/${org.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.mediaKit).not.toBeNull();
-      expect(res.body.mediaKit.status).toBe("drafted");
-    });
-
     it("returns 404 for unknown token", async () => {
-      const res = await request(app).get(
-        "/public/00000000-0000-0000-0000-000000000000"
-      );
-
+      const res = await request(app).get("/public/00000000-0000-0000-0000-000000000000");
       expect(res.status).toBe(404);
     });
 
-    it("requires no auth", async () => {
-      const org = await insertTestOrganization({ orgId: "org_pub_3" });
-      const res = await request(app).get(`/public/${org.shareToken}`);
-
-      // Should work without auth headers (200, not 401)
+    it("does not require auth", async () => {
+      const kit = await insertTestMediaKit({ orgId: "org_pub_3", status: "drafted" });
+      const res = await request(app).get(`/public/${kit.shareToken}`);
       expect(res.status).toBe(200);
     });
   });

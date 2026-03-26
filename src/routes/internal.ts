@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, and, inArray, desc, lt } from "drizzle-orm";
 import { db, sql } from "../db/index.js";
-import { organizations, mediaKits, mediaKitInstructions } from "../db/schema.js";
+import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import { UpsertGenerationResultRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -26,7 +26,6 @@ router.get("/internal/media-kits/generation-data", async (req, res) => {
   try {
     const orgId = req.orgId;
 
-    // Current generating kit
     const currentKit = await db.query.mediaKits.findFirst({
       where: and(
         eq(mediaKits.orgId, orgId),
@@ -34,7 +33,6 @@ router.get("/internal/media-kits/generation-data", async (req, res) => {
       ),
     });
 
-    // All instructions for this org's kits
     const instructionResults = await sql`
       SELECT mki.id, mki.instruction, mki.instruction_type, mki.created_at
       FROM media_kit_instructions mki
@@ -43,7 +41,6 @@ router.get("/internal/media-kits/generation-data", async (req, res) => {
       ORDER BY mki.created_at
     `;
 
-    // All feedbacks (denial reasons)
     const feedbackResults = await sql`
       SELECT id, denial_reason
       FROM media_kits
@@ -100,20 +97,15 @@ router.post("/internal/media-kits/generation-result", async (req, res) => {
   }
 });
 
-// GET /internal/media-kits/stale — orgs with stale kits (>1 month old)
+// GET /internal/media-kits/stale — kits not updated in >1 month
 router.get("/internal/media-kits/stale", async (req, res) => {
   try {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
     const results = await db
-      .select({
-        orgId: organizations.orgId,
-        name: organizations.name,
-        lastUpdated: mediaKits.updatedAt,
-      })
-      .from(organizations)
-      .innerJoin(mediaKits, eq(mediaKits.organizationId, organizations.id))
+      .select()
+      .from(mediaKits)
       .where(
         and(
           inArray(mediaKits.status, ["validated", "drafted"]),
@@ -122,52 +114,40 @@ router.get("/internal/media-kits/stale", async (req, res) => {
       )
       .orderBy(mediaKits.updatedAt);
 
-    // Deduplicate by org (keep oldest)
-    const seen = new Set<string>();
-    const deduped = results.filter((r) => {
-      if (seen.has(r.orgId)) return false;
-      seen.add(r.orgId);
-      return true;
-    });
-
-    res.json({
-      organizations: deduped.map((r) => ({
-        orgId: r.orgId,
-        name: r.name,
-        lastUpdated: r.lastUpdated.toISOString(),
-      })),
-    });
+    res.json({ mediaKits: results });
   } catch (err) {
     console.error("GET /internal/media-kits/stale error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /internal/media-kits/setup — setup status for all orgs
+// GET /internal/media-kits/setup — setup status per org
 router.get("/internal/media-kits/setup", async (req, res) => {
   try {
-    const orgs = await db.select().from(organizations);
+    // Get distinct org_ids with their best kit status
+    const results = await sql`
+      SELECT DISTINCT ON (org_id)
+        org_id,
+        status,
+        CASE WHEN status IN ('validated', 'drafted', 'generating') THEN true ELSE false END as has_kit,
+        CASE WHEN status IN ('validated', 'drafted') THEN true ELSE false END as is_setup
+      FROM media_kits
+      WHERE status IN ('validated', 'drafted', 'generating')
+      ORDER BY org_id, CASE status
+        WHEN 'validated' THEN 1
+        WHEN 'drafted' THEN 2
+        WHEN 'generating' THEN 3
+      END
+    `;
 
-    const result = await Promise.all(
-      orgs.map(async (org) => {
-        const kit = await db.query.mediaKits.findFirst({
-          where: and(
-            eq(mediaKits.organizationId, org.id),
-            inArray(mediaKits.status, ["validated", "drafted", "generating"])
-          ),
-          orderBy: desc(mediaKits.updatedAt),
-        });
-
-        return {
-          orgId: org.orgId,
-          hasKit: !!kit,
-          status: kit?.status ?? null,
-          isSetup: kit?.status === "validated" || kit?.status === "drafted",
-        };
-      })
-    );
-
-    res.json({ organizations: result });
+    res.json({
+      organizations: results.map((r: Record<string, unknown>) => ({
+        orgId: r.org_id,
+        hasKit: r.has_kit,
+        status: r.status,
+        isSetup: r.is_setup,
+      })),
+    });
   } catch (err) {
     console.error("GET /internal/media-kits/setup error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -177,25 +157,24 @@ router.get("/internal/media-kits/setup", async (req, res) => {
 // GET /internal/health/bulk — health per org
 router.get("/internal/health/bulk", async (req, res) => {
   try {
-    const orgs = await db.select().from(organizations);
+    const results = await sql`
+      SELECT
+        org_id,
+        COUNT(*)::int as total_kits,
+        bool_or(status = 'validated') as has_validated,
+        bool_or(status = 'drafted') as has_drafted
+      FROM media_kits
+      GROUP BY org_id
+    `;
 
-    const result = await Promise.all(
-      orgs.map(async (org) => {
-        const kits = await db
-          .select()
-          .from(mediaKits)
-          .where(eq(mediaKits.organizationId, org.id));
-
-        return {
-          orgId: org.orgId,
-          hasValidated: kits.some((k) => k.status === "validated"),
-          hasDrafted: kits.some((k) => k.status === "drafted"),
-          totalKits: kits.length,
-        };
-      })
-    );
-
-    res.json({ organizations: result });
+    res.json({
+      organizations: results.map((r: Record<string, unknown>) => ({
+        orgId: r.org_id,
+        hasValidated: r.has_validated,
+        hasDrafted: r.has_drafted,
+        totalKits: r.total_kits,
+      })),
+    });
   } catch (err) {
     console.error("GET /internal/health/bulk error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -205,39 +184,31 @@ router.get("/internal/health/bulk", async (req, res) => {
 // GET /internal/email-data/:orgId — press kit data for email templates
 router.get("/internal/email-data/:orgId", async (req, res) => {
   try {
-    const org = await db.query.organizations.findFirst({
-      where: eq(organizations.orgId, req.params.orgId),
-    });
-
-    if (!org) {
-      res.json({
-        companyName: null,
-        status: null,
-        title: null,
-        pressKitUrl: null,
-        content: null,
-        contentType: null,
-      });
-      return;
-    }
-
     const kit = await db.query.mediaKits.findFirst({
       where: and(
-        eq(mediaKits.organizationId, org.id),
+        eq(mediaKits.orgId, req.params.orgId),
         inArray(mediaKits.status, ["validated", "drafted"])
       ),
       orderBy: desc(mediaKits.updatedAt),
     });
 
-    const pressKitUrl = org.shareToken ? `/public/${org.shareToken}` : null;
+    if (!kit) {
+      res.json({
+        status: null,
+        title: null,
+        pressKitUrl: null,
+        content: null,
+      });
+      return;
+    }
+
+    const pressKitUrl = kit.shareToken ? `/public/${kit.shareToken}` : null;
 
     res.json({
-      companyName: org.name,
-      status: kit?.status ?? null,
-      title: kit?.title ?? null,
+      status: kit.status,
+      title: kit.title,
       pressKitUrl,
-      content: kit?.mdxPageContent ?? kit?.jsxPageContent ?? null,
-      contentType: kit?.mdxPageContent ? "mdx" : kit?.jsxPageContent ? "jsx" : null,
+      content: kit.mdxPageContent,
     });
   } catch (err) {
     console.error("GET /internal/email-data error:", err);

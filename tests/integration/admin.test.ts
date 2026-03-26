@@ -1,17 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { createTestApp, getAuthHeaders } from "../helpers/test-app.js";
-import {
-  cleanTestData,
-  insertTestOrganization,
-  insertTestMediaKit,
-  closeDb,
-} from "../helpers/test-db.js";
+import { cleanTestData, insertTestMediaKit, closeDb } from "../helpers/test-db.js";
 
 const app = createTestApp();
 const headers = getAuthHeaders();
 
-describe("Admin Endpoints", () => {
+describe("Admin", () => {
   beforeEach(async () => {
     await cleanTestData();
   });
@@ -21,90 +16,47 @@ describe("Admin Endpoints", () => {
     await closeDb();
   });
 
-  describe("GET /admin/organizations", () => {
-    it("lists orgs with kit counts", async () => {
-      const org = await insertTestOrganization({
-        orgId: "org_admin_1",
-        name: "Admin Org",
-      });
-      await insertTestMediaKit({
-        orgId: "org_admin_1",
-        organizationId: org.id,
-        status: "drafted",
-      });
-      await insertTestMediaKit({
-        orgId: "org_admin_1",
-        organizationId: org.id,
-        status: "validated",
-      });
+  describe("GET /admin/media-kits", () => {
+    it("lists all media kits", async () => {
+      await insertTestMediaKit({ orgId: "org_a", title: "Kit A", status: "validated" });
+      await insertTestMediaKit({ orgId: "org_b", title: "Kit B", status: "drafted" });
 
-      const res = await request(app)
-        .get("/admin/organizations")
-        .set(headers);
+      const res = await request(app).get("/admin/media-kits").set(headers);
 
       expect(res.status).toBe(200);
-      expect(res.body.organizations).toHaveLength(1);
-      expect(res.body.organizations[0].name).toBe("Admin Org");
-      expect(res.body.organizations[0].mediaKitCount).toBe(2);
+      expect(res.body.mediaKits).toHaveLength(2);
     });
 
-    it("supports search filter", async () => {
-      await insertTestOrganization({ orgId: "org_a", name: "Alpha Corp" });
-      await insertTestOrganization({ orgId: "org_b", name: "Beta Inc" });
+    it("filters by title search", async () => {
+      await insertTestMediaKit({ orgId: "org_a", title: "Alpha Corp Kit", status: "validated" });
+      await insertTestMediaKit({ orgId: "org_b", title: "Beta Inc Kit", status: "drafted" });
 
-      const res = await request(app)
-        .get("/admin/organizations?search=Alpha")
-        .set(headers);
+      const res = await request(app).get("/admin/media-kits?search=Alpha").set(headers);
 
       expect(res.status).toBe(200);
-      expect(res.body.organizations).toHaveLength(1);
-      expect(res.body.organizations[0].name).toBe("Alpha Corp");
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].title).toBe("Alpha Corp Kit");
     });
   });
 
-  describe("DELETE /admin/organizations/:id", () => {
-    it("deletes org with correct confirmName", async () => {
-      const org = await insertTestOrganization({
-        orgId: "org_del_1",
-        name: "Delete Me",
-      });
+  describe("DELETE /admin/media-kits/:id", () => {
+    it("deletes a media kit", async () => {
+      const kit = await insertTestMediaKit({ orgId: "org_del", title: "To Delete", status: "drafted" });
 
-      const res = await request(app)
-        .delete(`/admin/organizations/${org.id}?confirmName=Delete Me`)
-        .set(headers);
+      const res = await request(app).delete(`/admin/media-kits/${kit.id}`).set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
 
-      // Verify deleted
-      const checkRes = await request(app)
-        .get("/admin/organizations")
-        .set(headers);
-
-      expect(checkRes.body.organizations).toHaveLength(0);
+      const check = await request(app).get(`/media-kits/${kit.id}`).set(headers);
+      expect(check.status).toBe(404);
     });
 
-    it("rejects with wrong confirmName", async () => {
-      const org = await insertTestOrganization({
-        orgId: "org_del_2",
-        name: "My Org",
-      });
-
+    it("returns 404 for unknown kit", async () => {
       const res = await request(app)
-        .delete(`/admin/organizations/${org.id}?confirmName=Wrong Name`)
+        .delete("/admin/media-kits/00000000-0000-0000-0000-000000000000")
         .set(headers);
-
-      expect(res.status).toBe(400);
-    });
-
-    it("requires confirmName param", async () => {
-      const org = await insertTestOrganization({ orgId: "org_del_3", name: "Org" });
-
-      const res = await request(app)
-        .delete(`/admin/organizations/${org.id}`)
-        .set(headers);
-
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(404);
     });
   });
 });

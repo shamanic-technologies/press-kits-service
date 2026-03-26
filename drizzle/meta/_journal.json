@@ -36,6 +36,13 @@
       "when": 1774915200000,
       "tag": "0004_add_feature_slug",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774951200000,
+      "tag": "0005_drop_organizations_table",
+      "breakpoints": true
     }
   ]
 }

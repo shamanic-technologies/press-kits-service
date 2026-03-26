@@ -13,40 +13,23 @@ const ErrorResponseSchema = z
 const mediaKitStatusValues = ["drafted", "generating", "validated", "denied", "archived"] as const;
 const MediaKitStatusEnum = z.enum(mediaKitStatusValues).openapi("MediaKitStatus");
 
-// --- Organization Schemas (internal, used by admin/public routes) ---
-
-export const OrganizationResponseSchema = z
-  .object({
-    id: z.string().uuid(),
-    orgId: z.string(),
-    name: z.string().nullable(),
-    shareToken: z.string().uuid(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
-  .openapi("OrganizationResponse");
-
 // --- Media Kit Schemas ---
 
 export const MediaKitResponseSchema = z
   .object({
     id: z.string().uuid(),
-    clientOrganizationId: z.string().uuid().nullable(),
-    orgId: z.string().nullable(),
-    organizationId: z.string().uuid().nullable(),
-    title: z.string().nullable(),
-    iconUrl: z.string().nullable(),
-    mdxPageContent: z.string().nullable(),
-    jsxPageContent: z.string().nullable(),
-    jsonPageContent: z.unknown().nullable(),
-    notionPageContent: z.string().nullable(),
-    parentMediaKitId: z.string().uuid().nullable(),
-    status: MediaKitStatusEnum,
-    denialReason: z.string().nullable(),
-    workflowName: z.string().nullable(),
+    orgId: z.string(),
     brandId: z.string().nullable(),
     campaignId: z.string().nullable(),
     featureSlug: z.string().nullable(),
+    workflowName: z.string().nullable(),
+    shareToken: z.string().uuid().nullable(),
+    title: z.string().nullable(),
+    iconUrl: z.string().nullable(),
+    mdxPageContent: z.string().nullable(),
+    parentMediaKitId: z.string().uuid().nullable(),
+    status: MediaKitStatusEnum,
+    denialReason: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
@@ -76,57 +59,24 @@ export const CreateMediaKitRequestSchema = z
   })
   .openapi("CreateMediaKitRequest");
 
-export const ValidateMediaKitRequestSchema = z
-  .object({})
-  .openapi("ValidateMediaKitRequest");
-
-export const CancelDraftRequestSchema = z
-  .object({})
-  .openapi("CancelDraftRequest");
-
 // --- Public Schemas ---
 
 export const PublicMediaKitResponseSchema = z
   .object({
-    organization: z.object({
-      id: z.string().uuid(),
-      name: z.string().nullable(),
-      orgId: z.string(),
-    }),
-    mediaKit: MediaKitResponseSchema.nullable(),
+    mediaKit: MediaKitResponseSchema,
   })
   .openapi("PublicMediaKitResponse");
 
+// --- Internal Schemas ---
+
 export const EmailDataResponseSchema = z
   .object({
-    companyName: z.string().nullable(),
     status: MediaKitStatusEnum.nullable(),
     title: z.string().nullable(),
     pressKitUrl: z.string().nullable(),
     content: z.string().nullable(),
-    contentType: z.string().nullable(),
   })
   .openapi("EmailDataResponse");
-
-// --- Admin Schemas ---
-
-export const AdminOrganizationSchema = z
-  .object({
-    id: z.string().uuid(),
-    orgId: z.string(),
-    name: z.string().nullable(),
-    shareToken: z.string().uuid(),
-    mediaKitCount: z.number(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
-  .openapi("AdminOrganization");
-
-export const AdminOrganizationListResponseSchema = z
-  .object({ organizations: z.array(AdminOrganizationSchema) })
-  .openapi("AdminOrganizationListResponse");
-
-// --- Internal Schemas ---
 
 export const GenerationDataResponseSchema = z
   .object({
@@ -183,20 +133,6 @@ export const HealthBulkResponseSchema = z
   .object({ organizations: z.array(HealthBulkItemSchema) })
   .openapi("HealthBulkResponse");
 
-export const StaleKitOrgSchema = z
-  .object({
-    orgId: z.string(),
-    name: z.string().nullable(),
-    lastUpdated: z.string(),
-  })
-  .openapi("StaleKitOrg");
-
-export const StaleKitsResponseSchema = z
-  .object({ organizations: z.array(StaleKitOrgSchema) })
-  .openapi("StaleKitsResponse");
-
-// --- Health ---
-
 const HealthResponseSchema = z
   .object({ status: z.string(), service: z.string() })
   .openapi("HealthResponse");
@@ -223,7 +159,6 @@ registry.registerPath({
   request: {
     query: z.object({
       org_id: z.string().optional(),
-      organization_id: z.string().optional(),
       title: z.string().optional(),
       campaign_id: z.string().optional(),
     }),
@@ -327,27 +262,23 @@ registry.registerPath({
 // Admin
 registry.registerPath({
   method: "get",
-  path: "/admin/organizations",
-  summary: "List organizations with kit counts",
+  path: "/admin/media-kits",
+  summary: "List all media kits",
   tags: ["Admin"],
   request: { query: z.object({ search: z.string().optional() }) },
   responses: {
-    200: { description: "Admin org list", content: { "application/json": { schema: AdminOrganizationListResponseSchema } } },
+    200: { description: "Admin kit list", content: { "application/json": { schema: MediaKitListResponseSchema } } },
   },
 });
 
 registry.registerPath({
   method: "delete",
-  path: "/admin/organizations/{id}",
-  summary: "Delete organization",
+  path: "/admin/media-kits/{id}",
+  summary: "Delete media kit",
   tags: ["Admin"],
-  request: {
-    params: z.object({ id: z.string().uuid() }),
-    query: z.object({ confirmName: z.string() }),
-  },
+  request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
     200: { description: "Deleted", content: { "application/json": { schema: z.object({ success: z.boolean() }) } } },
-    400: { description: "Bad request", content: { "application/json": { schema: ErrorResponseSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
@@ -387,10 +318,10 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/internal/media-kits/stale",
-  summary: "Get orgs with stale kits (>1 month old)",
+  summary: "Get stale media kits (>1 month old)",
   tags: ["Internal"],
   responses: {
-    200: { description: "Stale kits", content: { "application/json": { schema: StaleKitsResponseSchema } } },
+    200: { description: "Stale kits", content: { "application/json": { schema: MediaKitListResponseSchema } } },
   },
 });
 

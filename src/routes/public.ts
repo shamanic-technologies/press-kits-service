@@ -1,49 +1,23 @@
 import { Router } from "express";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { organizations, mediaKits } from "../db/schema.js";
+import { mediaKits } from "../db/schema.js";
 
 const router = Router();
 
-// GET /public/:token — get validated kit by share_token (fallback to drafted)
+// GET /public/:token — get media kit by its share_token
 router.get("/public/:token", async (req, res) => {
   try {
-    const org = await db.query.organizations.findFirst({
-      where: eq(organizations.shareToken, req.params.token),
-    });
-
-    if (!org) {
-      res.status(404).json({ error: "Organization not found" });
-      return;
-    }
-
-    // Try validated first, fallback to drafted
-    let kit = await db.query.mediaKits.findFirst({
-      where: and(
-        eq(mediaKits.organizationId, org.id),
-        eq(mediaKits.status, "validated")
-      ),
-      orderBy: desc(mediaKits.updatedAt),
+    const kit = await db.query.mediaKits.findFirst({
+      where: eq(mediaKits.shareToken, req.params.token),
     });
 
     if (!kit) {
-      kit = await db.query.mediaKits.findFirst({
-        where: and(
-          eq(mediaKits.organizationId, org.id),
-          eq(mediaKits.status, "drafted")
-        ),
-        orderBy: desc(mediaKits.updatedAt),
-      });
+      res.status(404).json({ error: "Media kit not found" });
+      return;
     }
 
-    res.json({
-      organization: {
-        id: org.id,
-        name: org.name,
-        orgId: org.orgId,
-      },
-      mediaKit: kit ?? null,
-    });
+    res.json({ mediaKit: kit });
   } catch (err) {
     console.error("GET /public/:token error:", err);
     res.status(500).json({ error: "Internal server error" });

@@ -4,7 +4,6 @@ import {
   varchar,
   text,
   timestamp,
-  jsonb,
   index,
   uniqueIndex,
   pgEnum,
@@ -18,46 +17,30 @@ export const mediaKitStatusEnum = pgEnum("media_kit_status", [
   "archived",
 ]);
 
-export const organizations = pgTable(
-  "organizations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: varchar("org_id").unique().notNull(),
-    name: varchar("name"),
-    shareToken: uuid("share_token").unique().defaultRandom(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("idx_organizations_org_id").on(table.orgId)]
-);
-
 export const mediaKits = pgTable(
   "media_kits",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientOrganizationId: uuid("client_organization_id"),
-    orgId: varchar("org_id"),
-    organizationId: uuid("organization_id").references(() => organizations.id),
-    title: text("title"),
-    iconUrl: text("icon_url"),
-    mdxPageContent: text("mdx_page_content"),
-    jsxPageContent: text("jsx_page_content"),
-    jsonPageContent: jsonb("json_page_content"),
-    notionPageContent: text("notion_page_content"),
-    parentMediaKitId: uuid("parent_media_kit_id"),
-    status: mediaKitStatusEnum("status").notNull(),
-    denialReason: text("denial_reason"),
-    workflowName: varchar("workflow_name"),
+    orgId: varchar("org_id").notNull(),
     brandId: varchar("brand_id"),
     campaignId: varchar("campaign_id"),
     featureSlug: varchar("feature_slug"),
+    workflowName: varchar("workflow_name"),
+    shareToken: uuid("share_token").unique().defaultRandom(),
+    title: text("title"),
+    iconUrl: text("icon_url"),
+    mdxPageContent: text("mdx_page_content"),
+    parentMediaKitId: uuid("parent_media_kit_id"),
+    status: mediaKitStatusEnum("status").notNull(),
+    denialReason: text("denial_reason"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_media_kits_org_id").on(table.organizationId),
     index("idx_media_kits_ext_org_id").on(table.orgId),
     index("idx_media_kits_status").on(table.status),
+    index("idx_media_kits_campaign_id").on(table.campaignId),
+    uniqueIndex("idx_media_kits_share_token").on(table.shareToken),
   ]
 );
 
@@ -76,8 +59,6 @@ export const mediaKitInstructions = pgTable(
   (table) => [index("idx_instructions_media_kit_id").on(table.mediaKitId)]
 );
 
-export type Organization = typeof organizations.$inferSelect;
-export type NewOrganization = typeof organizations.$inferInsert;
 export type MediaKit = typeof mediaKits.$inferSelect;
 export type NewMediaKit = typeof mediaKits.$inferInsert;
 export type MediaKitInstruction = typeof mediaKitInstructions.$inferSelect;
