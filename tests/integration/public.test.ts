@@ -36,6 +36,12 @@ describe("Public", () => {
       expect(res.status).toBe(404);
     });
 
+    it("returns 400 for non-UUID token", async () => {
+      const res = await request(app).get("/public/.env.staging");
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Invalid token format");
+    });
+
     it("does not require auth", async () => {
       const kit = await insertTestMediaKit({ orgId: "org_pub_3", status: "drafted" });
       const res = await request(app).get(`/public/${kit.shareToken}`);
