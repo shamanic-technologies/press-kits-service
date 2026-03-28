@@ -50,6 +50,13 @@
       "when": 1774987200000,
       "tag": "0006_drop_sql_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775073600000,
+      "tag": "0007_rename_workflow_name_to_slug",
+      "breakpoints": true
     }
   ]
 }

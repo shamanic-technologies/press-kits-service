@@ -59,7 +59,7 @@
             "type": "string",
             "nullable": true
           },
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
             "nullable": true
           },
@@ -105,7 +105,7 @@
           "brandId",
           "campaignId",
           "featureSlug",
-          "workflowName",
+          "workflowSlug",
           "shareToken",
           "title",
           "iconUrl",

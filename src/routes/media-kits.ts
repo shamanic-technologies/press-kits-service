@@ -8,7 +8,7 @@ import {
   CreateMediaKitRequestSchema,
 } from "../schemas.js";
 import { createRun } from "../lib/runs-client.js";
-import { executeWorkflowByName } from "../lib/windmill-client.js";
+import { executeWorkflowBySlug } from "../lib/windmill-client.js";
 import { sendEmail } from "../lib/email-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
@@ -192,7 +192,7 @@ router.post("/media-kits", async (req, res) => {
         .values({
           orgId,
           status: "generating",
-          workflowName: ctx.workflowName ?? null,
+          workflowSlug: ctx.workflowSlug ?? null,
           brandId: ctx.brandId ?? null,
           campaignId: ctx.campaignId ?? null,
           featureSlug: ctx.featureSlug ?? null,
@@ -216,7 +216,7 @@ router.post("/media-kits", async (req, res) => {
           mdxPageContent: currentKit.mdxPageContent,
           parentMediaKitId: currentKit.id,
           status: "generating",
-          workflowName: ctx.workflowName ?? null,
+          workflowSlug: ctx.workflowSlug ?? null,
           brandId: ctx.brandId ?? currentKit.brandId,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
@@ -235,7 +235,7 @@ router.post("/media-kits", async (req, res) => {
         .update(mediaKits)
         .set({
           updatedAt: new Date(),
-          workflowName: ctx.workflowName ?? currentKit.workflowName,
+          workflowSlug: ctx.workflowSlug ?? currentKit.workflowSlug,
           brandId: ctx.brandId ?? currentKit.brandId,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
@@ -266,7 +266,7 @@ router.post("/media-kits", async (req, res) => {
       ctx,
     })
       .then((run) =>
-        executeWorkflowByName("generate-press-kit", {
+        executeWorkflowBySlug("generate-press-kit", {
           orgId: kitOrgId,
           mediaKitId: generatingKit.id,
         }, run.id, ctx)

@@ -17,7 +17,7 @@ export async function insertTestMediaKit(
       brandId: data.brandId ?? null,
       campaignId: data.campaignId ?? null,
       featureSlug: data.featureSlug ?? null,
-      workflowName: data.workflowName ?? null,
+      workflowSlug: data.workflowSlug ?? null,
       title: data.title ?? null,
       iconUrl: data.iconUrl ?? null,
       mdxPageContent: data.mdxPageContent ?? null,

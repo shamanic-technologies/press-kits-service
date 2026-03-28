@@ -23,4 +23,5 @@ beforeAll(async () => {
   await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS notion_page_content`;
   await sql`DROP TABLE IF EXISTS organizations CASCADE`;
   await sql`CREATE INDEX IF NOT EXISTS idx_media_kits_campaign_id ON media_kits USING btree (campaign_id)`;
+  await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='media_kits' AND column_name='workflow_name') THEN ALTER TABLE media_kits RENAME COLUMN workflow_name TO workflow_slug; END IF; END $$`;
 });
