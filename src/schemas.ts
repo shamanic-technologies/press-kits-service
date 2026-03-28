@@ -22,7 +22,7 @@ export const MediaKitResponseSchema = z
     brandId: z.string().nullable(),
     campaignId: z.string().nullable(),
     featureSlug: z.string().nullable(),
-    workflowName: z.string().nullable(),
+    workflowSlug: z.string().nullable(),
     shareToken: z.string().uuid().nullable(),
     title: z.string().nullable(),
     iconUrl: z.string().nullable(),

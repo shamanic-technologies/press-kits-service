@@ -37,13 +37,13 @@ export async function deployWorkflows(workflows: unknown[]): Promise<void> {
   });
 }
 
-export async function executeWorkflowByName(
-  name: string,
+export async function executeWorkflowBySlug(
+  slug: string,
   inputs: Record<string, unknown>,
   runId?: string,
   ctx?: ContextHeaders
 ): Promise<{ workflowRunId: string }> {
-  return workflowRequest(`/workflows/by-name/${encodeURIComponent(name)}/execute`, {
+  return workflowRequest(`/workflows/by-slug/${encodeURIComponent(slug)}/execute`, {
     method: "POST",
     body: { inputs, runId },
     ctx,

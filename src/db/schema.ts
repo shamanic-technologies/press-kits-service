@@ -25,7 +25,7 @@ export const mediaKits = pgTable(
     brandId: varchar("brand_id"),
     campaignId: varchar("campaign_id"),
     featureSlug: varchar("feature_slug"),
-    workflowName: varchar("workflow_name"),
+    workflowSlug: varchar("workflow_slug"),
     shareToken: uuid("share_token").unique().defaultRandom(),
     title: text("title"),
     iconUrl: text("icon_url"),
