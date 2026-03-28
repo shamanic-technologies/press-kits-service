@@ -73,6 +73,30 @@ describe("Media Kits", () => {
       expect(res.body.mediaKits[0].campaignId).toBe("camp-123");
     });
 
+    it("filters by brand_id", async () => {
+      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandId: "brand-aaa" });
+      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandId: "brand-bbb" });
+
+      const res = await request(app).get("/media-kits?brand_id=brand-aaa").set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].brandId).toBe("brand-aaa");
+    });
+
+    it("combines brand_id with org_id filter", async () => {
+      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandId: "brand-x" });
+      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandId: "brand-y" });
+      await insertTestMediaKit({ orgId: "org_other", status: "validated", brandId: "brand-x" });
+
+      const res = await request(app).get("/media-kits?org_id=org_combo&brand_id=brand-x").set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].orgId).toBe("org_combo");
+      expect(res.body.mediaKits[0].brandId).toBe("brand-x");
+    });
+
     it("requires at least one filter", async () => {
       const res = await request(app).get("/media-kits").set(headers);
       expect(res.status).toBe(400);

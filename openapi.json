@@ -377,6 +377,14 @@
             "required": false,
             "name": "campaign_id",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "brand_id",
+            "in": "query"
           }
         ],
         "responses": {
