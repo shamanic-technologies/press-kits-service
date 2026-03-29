@@ -59,7 +59,28 @@ export const mediaKitInstructions = pgTable(
   (table) => [index("idx_instructions_media_kit_id").on(table.mediaKitId)]
 );
 
+export const mediaKitViews = pgTable(
+  "media_kit_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mediaKitId: uuid("media_kit_id")
+      .references(() => mediaKits.id, { onDelete: "cascade" })
+      .notNull(),
+    viewedAt: timestamp("viewed_at", { withTimezone: true }).notNull().defaultNow(),
+    ipAddress: varchar("ip_address"),
+    userAgent: text("user_agent"),
+    country: varchar("country"),
+  },
+  (table) => [
+    index("idx_views_media_kit_id").on(table.mediaKitId),
+    index("idx_views_viewed_at").on(table.viewedAt),
+    index("idx_views_country").on(table.country),
+  ]
+);
+
 export type MediaKit = typeof mediaKits.$inferSelect;
 export type NewMediaKit = typeof mediaKits.$inferInsert;
 export type MediaKitInstruction = typeof mediaKitInstructions.$inferSelect;
 export type NewMediaKitInstruction = typeof mediaKitInstructions.$inferInsert;
+export type MediaKitView = typeof mediaKitViews.$inferSelect;
+export type NewMediaKitView = typeof mediaKitViews.$inferInsert;

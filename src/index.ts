@@ -14,6 +14,7 @@ import mediaKitsRoutes from "./routes/media-kits.js";
 import publicRoutes from "./routes/public.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
+import statsRoutes from "./routes/stats.js";
 import openapiRoutes from "./routes/openapi.js";
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(requireApiKey);
 app.use(requireIdentityHeaders);
 app.use(trackRun);
 app.use(mediaKitsRoutes);
+app.use(statsRoutes);
 app.use(adminRoutes);
 app.use(internalRoutes);
 

@@ -57,6 +57,13 @@
       "when": 1775073600000,
       "tag": "0007_rename_workflow_name_to_slug",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775160000000,
+      "tag": "0008_add_media_kit_views",
+      "breakpoints": true
     }
   ]
 }

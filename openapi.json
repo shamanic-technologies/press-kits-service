@@ -193,6 +193,75 @@
           "mediaKit"
         ]
       },
+      "ViewStatsFlatResponse": {
+        "type": "object",
+        "properties": {
+          "totalViews": {
+            "type": "number"
+          },
+          "uniqueVisitors": {
+            "type": "number"
+          },
+          "lastViewedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstViewedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "totalViews",
+          "uniqueVisitors",
+          "lastViewedAt",
+          "firstViewedAt"
+        ]
+      },
+      "ViewStatsGroupedResponse": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "totalViews": {
+                  "type": "number"
+                },
+                "uniqueVisitors": {
+                  "type": "number"
+                },
+                "lastViewedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "key",
+                "totalViews",
+                "uniqueVisitors",
+                "lastViewedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "groups"
+        ]
+      },
+      "ViewStatsGroupBy": {
+        "type": "string",
+        "enum": [
+          "country",
+          "mediaKitId",
+          "day"
+        ]
+      },
       "GenerationDataResponse": {
         "type": "object",
         "properties": {
@@ -694,6 +763,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media-kits/stats/views": {
+      "get": {
+        "summary": "Get view stats for media kits",
+        "description": "Returns aggregated view stats for the org's media kits. Supports filters (brandId, campaignId, mediaKitId, date range) and optional groupBy (country, mediaKitId, day). Without groupBy returns flat totals; with groupBy returns grouped results.",
+        "tags": [
+          "Stats"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "mediaKitId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ViewStatsGroupBy"
+            },
+            "required": false,
+            "name": "groupBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "View stats (flat or grouped depending on groupBy param)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ViewStatsFlatResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ViewStatsGroupedResponse"
+                    }
+                  ]
                 }
               }
             }

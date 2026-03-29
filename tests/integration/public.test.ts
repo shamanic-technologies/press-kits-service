@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { createTestApp } from "../helpers/test-app.js";
 import { cleanTestData, insertTestMediaKit, closeDb } from "../helpers/test-db.js";
+import { db } from "../../src/db/index.js";
+import { mediaKitViews } from "../../src/db/schema.js";
+import { eq } from "drizzle-orm";
 
 const app = createTestApp();
 
@@ -29,6 +32,26 @@ describe("Public", () => {
       expect(res.status).toBe(200);
       expect(res.body.mediaKit.id).toBe(kit.id);
       expect(res.body.mediaKit.title).toBe("Public Kit");
+    });
+
+    it("tracks a view on successful access", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_pub_views",
+        status: "validated",
+      });
+
+      await request(app).get(`/public/${kit.shareToken}`);
+
+      // Give the fire-and-forget insert a moment to complete
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const views = await db
+        .select()
+        .from(mediaKitViews)
+        .where(eq(mediaKitViews.mediaKitId, kit.id));
+
+      expect(views).toHaveLength(1);
+      expect(views[0].mediaKitId).toBe(kit.id);
     });
 
     it("returns 404 for unknown token", async () => {
