@@ -6,7 +6,6 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./db/index.js";
 import { requireApiKey, requireIdentityHeaders } from "./middleware/auth.js";
 import { trackRun } from "./middleware/run-tracking.js";
-import { deployWorkflows } from "./lib/windmill-client.js";
 import { deployTemplates } from "./lib/email-client.js";
 
 import healthRoutes from "./routes/health.js";
@@ -46,73 +45,6 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Internal server error" });
 });
 
-const PRESS_KIT_GENERATION_WORKFLOW = {
-  name: "generate-press-kit",
-  description: "Generate press kit MDX content via LLM",
-  dag: {
-    nodes: [
-      {
-        id: "fetch-data",
-        type: "http.call" as const,
-        config: {
-          service: "press-kits",
-          method: "GET",
-          path: "/internal/media-kits/generation-data",
-        },
-        inputMapping: {
-          "query.media_kit_id": "$ref:flow_input.mediaKitId",
-        },
-      },
-      {
-        id: "generate-mdx",
-        type: "http.call" as const,
-        config: {
-          service: "content-generation",
-          method: "POST",
-          path: "/generate",
-        },
-        inputMapping: {
-          "body.variables": "$ref:fetch-data.output",
-          "body.parentRunId": "$ref:flow_input.runId",
-        },
-        retries: 0,
-      },
-      {
-        id: "upsert-result",
-        type: "http.call" as const,
-        config: {
-          service: "press-kits",
-          method: "POST",
-          path: "/internal/media-kits/generation-result",
-        },
-        inputMapping: {
-          "body.mediaKitId": "$ref:flow_input.mediaKitId",
-          "body.mdxContent": "$ref:generate-mdx.output.bodyHtml",
-          "body.title": "$ref:generate-mdx.output.title",
-        },
-      },
-      {
-        id: "end-run",
-        type: "http.call" as const,
-        config: {
-          service: "runs",
-          method: "PATCH",
-        },
-        inputMapping: {
-          path: "$ref:flow_input.runId",
-          "body.status": "completed",
-        },
-      },
-    ],
-    edges: [
-      { from: "fetch-data", to: "generate-mdx" },
-      { from: "generate-mdx", to: "upsert-result" },
-      { from: "upsert-result", to: "end-run" },
-    ],
-    onError: "end-run",
-  },
-};
-
 const PRESS_KIT_READY_TEMPLATE = {
   name: "press_kit_ready",
   subject: "Your press kit is ready!",
@@ -126,19 +58,13 @@ async function startup(): Promise<void> {
   await migrate(db, { migrationsFolder: "./drizzle" });
   console.log("Migrations complete");
 
-  // 2. Deploy windmill workflow (idempotent)
-  if (process.env.WORKFLOW_SERVICE_API_KEY) {
-    await deployWorkflows([PRESS_KIT_GENERATION_WORKFLOW]);
-    console.log("Workflows deployed");
-  }
-
-  // 3. Deploy email templates (idempotent)
+  // 2. Deploy email templates (idempotent)
   if (process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY) {
     await deployTemplates([PRESS_KIT_READY_TEMPLATE]);
     console.log("Email templates deployed");
   }
 
-  // 4. Start listening
+  // 3. Start listening
   app.listen(Number(PORT), "::", () => {
     console.log(`press-kits-service running on port ${PORT}`);
   });

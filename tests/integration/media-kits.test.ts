@@ -14,9 +14,8 @@ vi.mock("../../src/lib/runs-client.js", () => ({
   addCosts: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../src/lib/windmill-client.js", () => ({
-  deployWorkflows: vi.fn().mockResolvedValue(undefined),
-  executeWorkflowByName: vi.fn().mockResolvedValue({ workflowRunId: "wf-123" }),
+vi.mock("../../src/lib/generate.js", () => ({
+  generatePressKit: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../src/lib/email-client.js", () => ({
