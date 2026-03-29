@@ -193,8 +193,8 @@ describe("Internal", () => {
       expect(res.body.content).toBe("# Content");
     });
 
-    it("uses PRESS_KITS_SERVICE_URL env var for press kit URL", async () => {
-      process.env.PRESS_KITS_SERVICE_URL = "https://custom.example.com";
+    it("uses RAILWAY_PUBLIC_DOMAIN env var for press kit URL", async () => {
+      process.env.RAILWAY_PUBLIC_DOMAIN = "custom.example.com";
       const kit = await insertTestMediaKit({
         orgId: "org_custom_url",
         title: "Custom URL Kit",
@@ -208,7 +208,7 @@ describe("Internal", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.pressKitUrl).toBe(`https://custom.example.com/public/${kit.shareToken}`);
-      delete process.env.PRESS_KITS_SERVICE_URL;
+      delete process.env.RAILWAY_PUBLIC_DOMAIN;
     });
 
     it("returns nulls when no kit exists", async () => {
