@@ -193,6 +193,24 @@ describe("Internal", () => {
       expect(res.body.content).toBe("# Content");
     });
 
+    it("uses PRESS_KITS_SERVICE_URL env var for press kit URL", async () => {
+      process.env.PRESS_KITS_SERVICE_URL = "https://custom.example.com";
+      const kit = await insertTestMediaKit({
+        orgId: "org_custom_url",
+        title: "Custom URL Kit",
+        mdxPageContent: "# Content",
+        status: "validated",
+      });
+
+      const res = await request(app)
+        .get("/internal/email-data/org_custom_url")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.pressKitUrl).toBe(`https://custom.example.com/public/${kit.shareToken}`);
+      delete process.env.PRESS_KITS_SERVICE_URL;
+    });
+
     it("returns nulls when no kit exists", async () => {
       const res = await request(app)
         .get("/internal/email-data/org_none")
