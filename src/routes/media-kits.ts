@@ -16,6 +16,28 @@ const router = Router();
 
 const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
 
+const EXCERPT_LENGTH = 200;
+
+/** Strip MDX/Markdown markup and return first ~200 chars of plain text. */
+function extractContentExcerpt(mdx: string | null): string | null {
+  if (!mdx) return null;
+  const plain = mdx
+    .replace(/^import\s.*$/gm, "")      // import statements
+    .replace(/<[^>]+>/g, "")             // JSX/HTML tags
+    .replace(/!\[.*?\]\(.*?\)/g, "")     // images
+    .replace(/\[([^\]]*)\]\(.*?\)/g, "$1") // links → text
+    .replace(/^#{1,6}\s+/gm, "")        // headings
+    .replace(/[*_~`>]/g, "")            // inline formatting
+    .replace(/\n{2,}/g, " ")            // collapse blank lines
+    .replace(/\n/g, " ")                // remaining newlines
+    .replace(/ {2,}/g, " ")             // collapse multiple spaces
+    .trim();
+  if (!plain) return null;
+  return plain.length <= EXCERPT_LENGTH
+    ? plain
+    : plain.slice(0, EXCERPT_LENGTH).replace(/\s\S*$/, "...");
+}
+
 // GET /media-kits — list kits for an org
 router.get("/media-kits", async (req, res) => {
   try {
@@ -59,9 +81,14 @@ router.get("/media-kits", async (req, res) => {
         desc(mediaKits.updatedAt)
       );
 
-    res.json({ mediaKits: results });
+    const summaries = results.map(({ mdxPageContent, ...rest }) => ({
+      ...rest,
+      contentExcerpt: extractContentExcerpt(mdxPageContent),
+    }));
+
+    res.json({ mediaKits: summaries });
   } catch (err) {
-    console.error("GET /media-kits error:", err);
+    console.error("[press-kits-service] GET /media-kits error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

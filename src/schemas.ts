@@ -38,8 +38,15 @@ export const MediaKitResponseSchema = z
   })
   .openapi("MediaKitResponse");
 
+export const MediaKitSummarySchema = MediaKitResponseSchema.extend({
+  contentExcerpt: z.string().nullable().openapi({
+    description: "First ~200 characters of the MDX content, stripped of markup. Useful for card/grid previews.",
+    example: "Acme Corp is a leading provider of innovative solutions in the SaaS space, serving over 10,000 customers worldwide...",
+  }),
+}).omit({ mdxPageContent: true }).openapi("MediaKitSummary");
+
 export const MediaKitListResponseSchema = z
-  .object({ mediaKits: z.array(MediaKitResponseSchema) })
+  .object({ mediaKits: z.array(MediaKitSummarySchema) })
   .openapi("MediaKitListResponse");
 
 export const UpdateMdxRequestSchema = z

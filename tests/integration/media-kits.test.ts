@@ -101,6 +101,50 @@ describe("Media Kits", () => {
       const res = await request(app).get("/media-kits").set(headers);
       expect(res.status).toBe(400);
     });
+
+    it("returns contentExcerpt stripped of MDX markup", async () => {
+      await insertTestMediaKit({
+        orgId: "org_excerpt",
+        status: "validated",
+        mdxPageContent: "# Welcome\n\nThis is **bold** and [a link](https://example.com).\n\n<CustomComponent prop=\"val\" />\n\nPlain text here.",
+      });
+
+      const res = await request(app).get("/media-kits?org_id=org_excerpt").set(headers);
+
+      expect(res.status).toBe(200);
+      const kit = res.body.mediaKits[0];
+      expect(kit.contentExcerpt).toBe("Welcome This is bold and a link. Plain text here.");
+      expect(kit.mdxPageContent).toBeUndefined();
+    });
+
+    it("returns null contentExcerpt when mdxPageContent is null", async () => {
+      await insertTestMediaKit({
+        orgId: "org_no_mdx",
+        status: "drafted",
+        mdxPageContent: null,
+      });
+
+      const res = await request(app).get("/media-kits?org_id=org_no_mdx").set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits[0].contentExcerpt).toBeNull();
+    });
+
+    it("truncates long content with ellipsis", async () => {
+      const longContent = "# Title\n\n" + "Lorem ipsum dolor sit amet. ".repeat(20);
+      await insertTestMediaKit({
+        orgId: "org_long",
+        status: "validated",
+        mdxPageContent: longContent,
+      });
+
+      const res = await request(app).get("/media-kits?org_id=org_long").set(headers);
+
+      expect(res.status).toBe(200);
+      const excerpt = res.body.mediaKits[0].contentExcerpt;
+      expect(excerpt.endsWith("...")).toBe(true);
+      expect(excerpt.length).toBeLessThanOrEqual(210); // ~200 + ellipsis + word boundary slack
+    });
   });
 
   describe("GET /media-kits/:id", () => {
