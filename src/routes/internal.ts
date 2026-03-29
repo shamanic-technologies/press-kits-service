@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
-import { UpsertGenerationResultRequestSchema } from "../schemas.js";
+import { UpsertGenerationResultRequestSchema, GenerationFailureRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -137,6 +137,48 @@ router.post("/internal/media-kits/generation-result", async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error("POST /internal/media-kits/generation-result error:", err);
+    res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
+  }
+});
+
+// POST /internal/media-kits/generation-failure — workflow failure callback
+router.post("/internal/media-kits/generation-failure", async (req, res) => {
+  try {
+    const body = GenerationFailureRequestSchema.parse(req.body);
+
+    let condition;
+    if (body.mediaKitId) {
+      condition = and(
+        eq(mediaKits.id, body.mediaKitId),
+        eq(mediaKits.status, "generating"),
+      );
+    } else {
+      const orgId = body.orgId ?? req.orgId;
+      condition = and(
+        eq(mediaKits.orgId, orgId),
+        eq(mediaKits.status, "generating"),
+      );
+    }
+
+    const [updated] = await db
+      .update(mediaKits)
+      .set({
+        status: "denied",
+        denialReason: body.reason || "Generation workflow failed",
+        updatedAt: new Date(),
+      })
+      .where(condition)
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "No generating kit found" });
+      return;
+    }
+
+    console.log(`[press-kits-service] Kit ${updated.id} marked as denied: ${body.reason || "Generation workflow failed"}`);
+    res.json(updated);
+  } catch (err) {
+    console.error("[press-kits-service] POST /internal/media-kits/generation-failure error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
   }
 });

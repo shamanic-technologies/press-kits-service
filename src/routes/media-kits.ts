@@ -285,8 +285,9 @@ router.post("/media-kits", async (req, res) => {
       return;
     }
 
-    // Create run + trigger workflow (fire-and-forget)
+    // Create run + trigger workflow (fire-and-forget, but handle failures)
     const kitOrgId = generatingKit.orgId;
+    const kitId = generatingKit.id;
 
     createRun({
       orgId: kitOrgId,
@@ -299,10 +300,24 @@ router.post("/media-kits", async (req, res) => {
       .then((run) =>
         executeWorkflowBySlug("generate-press-kit", {
           orgId: kitOrgId,
-          mediaKitId: generatingKit.id,
+          mediaKitId: kitId,
         }, run.id, ctx)
       )
-      .catch((err) => console.error("Workflow trigger failed:", err));
+      .catch(async (err) => {
+        console.error("[press-kits-service] Workflow trigger failed:", err);
+        try {
+          await db
+            .update(mediaKits)
+            .set({
+              status: "denied",
+              denialReason: `Generation workflow failed to start: ${err instanceof Error ? err.message : String(err)}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(mediaKits.id, kitId));
+        } catch (dbErr) {
+          console.error("[press-kits-service] Failed to update kit status after workflow failure:", dbErr);
+        }
+      });
 
     res.json(generatingKit);
   } catch (err) {
