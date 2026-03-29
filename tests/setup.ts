@@ -9,6 +9,7 @@ vi.mock("../src/lib/runs-client.js", () => ({
   createRun: vi.fn().mockResolvedValue({ id: "test-run-id" }),
   updateRunStatus: vi.fn().mockResolvedValue(undefined),
   addCosts: vi.fn().mockResolvedValue(undefined),
+  batchGetCosts: vi.fn().mockResolvedValue([]),
 }));
 
 beforeAll(async () => {
@@ -38,4 +39,16 @@ beforeAll(async () => {
   await sql`CREATE INDEX IF NOT EXISTS idx_views_country ON media_kit_views USING btree (country)`;
   // Add 'failed' status to enum
   await sql`ALTER TYPE media_kit_status ADD VALUE IF NOT EXISTS 'failed'`;
+  // media_kit_runs table
+  await sql`DO $$ BEGIN CREATE TYPE media_kit_run_type AS ENUM ('generation', 'edit'); EXCEPTION WHEN duplicate_object THEN null; END $$`;
+  await sql`CREATE TABLE IF NOT EXISTS media_kit_runs (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    media_kit_id uuid NOT NULL REFERENCES media_kits(id) ON DELETE CASCADE,
+    run_id varchar NOT NULL,
+    parent_run_id varchar,
+    run_type media_kit_run_type NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_runs_media_kit_id ON media_kit_runs USING btree (media_kit_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_runs_run_id ON media_kit_runs USING btree (run_id)`;
 });

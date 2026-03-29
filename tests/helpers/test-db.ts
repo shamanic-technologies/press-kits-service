@@ -1,8 +1,9 @@
 import { db, sql } from "../../src/db/index.js";
-import { mediaKits, mediaKitInstructions, mediaKitViews } from "../../src/db/schema.js";
-import type { NewMediaKit, NewMediaKitInstruction, NewMediaKitView } from "../../src/db/schema.js";
+import { mediaKits, mediaKitInstructions, mediaKitViews, mediaKitRuns } from "../../src/db/schema.js";
+import type { NewMediaKit, NewMediaKitInstruction, NewMediaKitView, NewMediaKitRun } from "../../src/db/schema.js";
 
 export async function cleanTestData(): Promise<void> {
+  await db.delete(mediaKitRuns);
   await db.delete(mediaKitViews);
   await db.delete(mediaKitInstructions);
   await db.delete(mediaKits);
@@ -63,6 +64,25 @@ export async function insertTestView(
     })
     .returning();
   return view;
+}
+
+export async function insertTestMediaKitRun(
+  data: Partial<NewMediaKitRun> & {
+    mediaKitId: string;
+    runId: string;
+    runType: NewMediaKitRun["runType"];
+  }
+) {
+  const [run] = await db
+    .insert(mediaKitRuns)
+    .values({
+      mediaKitId: data.mediaKitId,
+      runId: data.runId,
+      parentRunId: data.parentRunId ?? null,
+      runType: data.runType,
+    })
+    .returning();
+  return run;
 }
 
 export async function closeDb(): Promise<void> {

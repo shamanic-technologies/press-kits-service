@@ -1,16 +1,17 @@
 import { Router } from "express";
 import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull, lt } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { mediaKits, mediaKitInstructions } from "../db/schema.js";
+import { mediaKits, mediaKitInstructions, mediaKitRuns } from "../db/schema.js";
 import {
   UpdateMdxRequestSchema,
   UpdateStatusRequestSchema,
   CreateMediaKitRequestSchema,
 } from "../schemas.js";
-import { createRun } from "../lib/runs-client.js";
+import { createRun, updateRunStatus } from "../lib/runs-client.js";
 import { generatePressKit } from "../lib/generate.js";
 import { sendEmail } from "../lib/email-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
+import type { ContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -317,8 +318,9 @@ router.post("/media-kits", async (req, res) => {
       return;
     }
 
-    // Fire-and-forget: create run + generate directly
+    // Fire-and-forget: create child run, track it, generate, close run
     const kitId = generatingKit.id;
+    const runType: "generation" | "edit" = currentKit ? "edit" : "generation";
 
     createRun({
       orgId: generatingKit.orgId,
@@ -328,10 +330,26 @@ router.post("/media-kits", async (req, res) => {
       parentRunId: req.runId,
       ctx,
     })
-      .then(() => generatePressKit(kitId, ctx))
-      .catch(async (err) => {
-        console.error("[press-kits-service] Generation failed:", err);
+      .then(async (run) => {
+        // Record the run in our local table
+        await db.insert(mediaKitRuns).values({
+          mediaKitId: kitId,
+          runId: run.id,
+          parentRunId: req.runId,
+          runType,
+        });
+
+        // Forward the child run ID downstream
+        const childCtx: ContextHeaders = { ...ctx, runId: run.id };
+
         try {
+          await generatePressKit(kitId, childCtx);
+          await updateRunStatus(run.id, "completed", childCtx);
+        } catch (err) {
+          console.error("[press-kits-service] Generation failed:", err);
+          await updateRunStatus(run.id, "failed", childCtx).catch((e) =>
+            console.error("[press-kits-service] Failed to close run:", e)
+          );
           await db
             .update(mediaKits)
             .set({
@@ -340,9 +358,21 @@ router.post("/media-kits", async (req, res) => {
               updatedAt: new Date(),
             })
             .where(eq(mediaKits.id, kitId));
-        } catch (dbErr) {
-          console.error("[press-kits-service] Failed to update kit status after generation failure:", dbErr);
         }
+      })
+      .catch(async (err) => {
+        console.error("[press-kits-service] Failed to create generation run:", err);
+        await db
+          .update(mediaKits)
+          .set({
+            status: "failed",
+            denialReason: `Run tracking failed: ${err instanceof Error ? err.message : String(err)}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(mediaKits.id, kitId))
+          .catch((dbErr) =>
+            console.error("[press-kits-service] Failed to update kit status:", dbErr)
+          );
       });
 
     res.json(generatingKit);
