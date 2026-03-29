@@ -123,6 +123,16 @@ export const UpsertGenerationResultRequestSchema = z
   })
   .openapi("UpsertGenerationResultRequest");
 
+export const GenerationFailureRequestSchema = z
+  .object({
+    mediaKitId: z.string().uuid().optional(),
+    orgId: z.string().optional(),
+    reason: z.string().optional().openapi({
+      description: "Reason the generation failed (e.g. workflow timeout, LLM error). Stored as denialReason.",
+    }),
+  })
+  .openapi("GenerationFailureRequest");
+
 const HealthResponseSchema = z
   .object({ status: z.string(), service: z.string() })
   .openapi("HealthResponse");
@@ -385,6 +395,19 @@ registry.registerPath({
   request: { body: { content: { "application/json": { schema: UpsertGenerationResultRequestSchema } } } },
   responses: {
     200: { description: "Upserted", content: { "application/json": { schema: MediaKitResponseSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/internal/media-kits/generation-failure",
+  summary: "Report generation failure (workflow failure callback)",
+  description: "Called by the workflow service when a generation workflow fails or times out. Transitions the generating kit to denied status with the failure reason.",
+  tags: ["Internal"],
+  request: { body: { content: { "application/json": { schema: GenerationFailureRequestSchema } } } },
+  responses: {
+    200: { description: "Kit marked as denied", content: { "application/json": { schema: MediaKitResponseSchema } } },
+    404: { description: "No generating kit found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });
 
