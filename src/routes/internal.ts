@@ -162,7 +162,8 @@ router.get("/internal/email-data/:orgId", async (req, res) => {
       return;
     }
 
-    const pressKitUrl = kit.shareToken ? `/public/${kit.shareToken}` : null;
+    const baseUrl = process.env.PUBLIC_BASE_URL || "https://press-kits.distribute.you";
+    const pressKitUrl = kit.shareToken ? `${baseUrl}/public/${kit.shareToken}` : null;
 
     res.json({
       status: kit.status,

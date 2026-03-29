@@ -120,7 +120,7 @@ export const EmailDataResponseSchema = z
   .object({
     status: MediaKitStatusEnum.nullable().openapi({ example: "validated" }),
     title: z.string().nullable().openapi({ example: "Acme Corp Press Kit — Q1 2026" }),
-    pressKitUrl: z.string().nullable().openapi({ description: "Public URL path for the press kit.", example: "/public/f47ac10b-58cc-4372-a567-0e02b2c3d479" }),
+    pressKitUrl: z.string().nullable().openapi({ description: "Full public URL for the press kit page.", example: "https://press-kits.distribute.you/public/f47ac10b-58cc-4372-a567-0e02b2c3d479" }),
     content: z.string().nullable().openapi({ example: "# Acme Corp\n\nLeading SaaS provider..." }),
   })
   .openapi("EmailDataResponse");
@@ -353,11 +353,12 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/public/{token}",
-  summary: "Get public media kit by share token",
+  summary: "Get public media kit page by share token",
+  description: "Returns a fully rendered HTML page for the press kit. Intended to be opened in a browser.",
   tags: ["Public"],
   request: { params: z.object({ token: z.string().uuid() }) },
   responses: {
-    200: { description: "Public media kit", content: { "application/json": { schema: PublicMediaKitResponseSchema } } },
+    200: { description: "Rendered HTML press kit page", content: { "text/html": { schema: z.string() } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
   },
 });

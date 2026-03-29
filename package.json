@@ -21,6 +21,7 @@
     "drizzle-orm": "^0.36.0",
     "express": "^4.21.0",
     "geoip-lite": "^2.0.1",
+    "marked": "^17.0.5",
     "postgres": "^3.4.0",
     "zod": "^3.24.0"
   },
