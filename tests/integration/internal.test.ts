@@ -189,7 +189,7 @@ describe("Internal", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.title).toBe("Email Kit");
-      expect(res.body.pressKitUrl).toBe(`/public/${kit.shareToken}`);
+      expect(res.body.pressKitUrl).toBe(`https://press-kits.distribute.you/public/${kit.shareToken}`);
       expect(res.body.content).toBe("# Content");
     });
 

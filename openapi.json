@@ -317,17 +317,6 @@
           "instruction"
         ]
       },
-      "PublicMediaKitResponse": {
-        "type": "object",
-        "properties": {
-          "mediaKit": {
-            "$ref": "#/components/schemas/MediaKitResponse"
-          }
-        },
-        "required": [
-          "mediaKit"
-        ]
-      },
       "ViewStatsFlatResponse": {
         "type": "object",
         "properties": {
@@ -526,8 +515,8 @@
           "pressKitUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Public URL path for the press kit.",
-            "example": "/public/f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            "description": "Full public URL for the press kit page.",
+            "example": "https://press-kits.distribute.you/public/f47ac10b-58cc-4372-a567-0e02b2c3d479"
           },
           "content": {
             "type": "string",
@@ -1160,7 +1149,8 @@
     },
     "/public/{token}": {
       "get": {
-        "summary": "Get public media kit by share token",
+        "summary": "Get public media kit page by share token",
+        "description": "Returns a fully rendered HTML page for the press kit. Intended to be opened in a browser.",
         "tags": [
           "Public"
         ],
@@ -1177,11 +1167,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Public media kit",
+            "description": "Rendered HTML press kit page",
             "content": {
-              "application/json": {
+              "text/html": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicMediaKitResponse"
+                  "type": "string"
                 }
               }
             }

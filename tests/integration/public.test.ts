@@ -19,19 +19,51 @@ describe("Public", () => {
   });
 
   describe("GET /public/:token", () => {
-    it("returns media kit by share token", async () => {
+    it("returns rendered HTML page with kit content", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_pub",
         title: "Public Kit",
-        mdxPageContent: "# Hello",
+        mdxPageContent: "# Hello World\n\nThis is a press kit.",
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.mediaKit.id).toBe(kit.id);
-      expect(res.body.mediaKit.title).toBe("Public Kit");
+      expect(res.headers["content-type"]).toMatch(/text\/html/);
+      expect(res.text).toContain("<!DOCTYPE html>");
+      expect(res.text).toContain("<title>Public Kit</title>");
+      expect(res.text).toContain("<h1>Hello World</h1>");
+      expect(res.text).toContain("This is a press kit.");
+    });
+
+    it("escapes HTML in the title to prevent XSS", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_xss",
+        title: '<script>alert("xss")</script>',
+        mdxPageContent: "# Safe Content",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('<script>alert("xss")</script>');
+      expect(res.text).toContain("&lt;script&gt;");
+    });
+
+    it("renders with default title when kit title is null", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_notitle",
+        title: null,
+        mdxPageContent: "# No Title Kit",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("<title>Press Kit</title>");
     });
 
     it("tracks a view on successful access", async () => {
@@ -69,6 +101,23 @@ describe("Public", () => {
       const kit = await insertTestMediaKit({ orgId: "org_pub_3", status: "drafted" });
       const res = await request(app).get(`/public/${kit.shareToken}`);
       expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/html/);
+    });
+
+    it("includes favicon link when iconUrl is set", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_icon",
+        title: "Icon Kit",
+        iconUrl: "https://cdn.example.com/icon.png",
+        mdxPageContent: "# With Icon",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('rel="icon"');
+      expect(res.text).toContain("https://cdn.example.com/icon.png");
     });
   });
 });
