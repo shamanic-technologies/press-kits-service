@@ -8,7 +8,7 @@ import {
   CreateMediaKitRequestSchema,
 } from "../schemas.js";
 import { createRun } from "../lib/runs-client.js";
-import { executeWorkflowBySlug } from "../lib/windmill-client.js";
+import { generatePressKit } from "../lib/generate.js";
 import { sendEmail } from "../lib/email-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
@@ -317,37 +317,31 @@ router.post("/media-kits", async (req, res) => {
       return;
     }
 
-    // Create run + trigger workflow (fire-and-forget, but handle failures)
-    const kitOrgId = generatingKit.orgId;
+    // Fire-and-forget: create run + generate directly
     const kitId = generatingKit.id;
 
     createRun({
-      orgId: kitOrgId,
+      orgId: generatingKit.orgId,
       userId: req.userId,
       serviceName: "press-kits-service",
       taskName: "generate-press-kit",
       parentRunId: req.runId,
       ctx,
     })
-      .then((run) =>
-        executeWorkflowBySlug("generate-press-kit", {
-          orgId: kitOrgId,
-          mediaKitId: kitId,
-        }, run.id, ctx)
-      )
+      .then(() => generatePressKit(kitId))
       .catch(async (err) => {
-        console.error("[press-kits-service] Workflow trigger failed:", err);
+        console.error("[press-kits-service] Generation failed:", err);
         try {
           await db
             .update(mediaKits)
             .set({
               status: "failed",
-              denialReason: `Generation workflow failed to start: ${err instanceof Error ? err.message : String(err)}`,
+              denialReason: `Generation failed: ${err instanceof Error ? err.message : String(err)}`,
               updatedAt: new Date(),
             })
             .where(eq(mediaKits.id, kitId));
         } catch (dbErr) {
-          console.error("[press-kits-service] Failed to update kit status after workflow failure:", dbErr);
+          console.error("[press-kits-service] Failed to update kit status after generation failure:", dbErr);
         }
       });
 
