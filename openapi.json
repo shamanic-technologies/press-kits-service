@@ -114,6 +114,12 @@
             "type": "string",
             "example": "2026-03-29T10:05:00.000Z"
           },
+          "publicUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Full public URL for the press kit page. Ready to open in a browser.",
+            "example": "https://press-kits.distribute.you/public/f47ac10b-58cc-4372-a567-0e02b2c3d479"
+          },
           "contentExcerpt": {
             "type": "string",
             "nullable": true,
@@ -136,6 +142,7 @@
           "denialReason",
           "createdAt",
           "updatedAt",
+          "publicUrl",
           "contentExcerpt"
         ]
       },
@@ -243,6 +250,12 @@
           "updatedAt": {
             "type": "string",
             "example": "2026-03-29T10:05:00.000Z"
+          },
+          "publicUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Full public URL for the press kit page. Ready to open in a browser.",
+            "example": "https://press-kits.distribute.you/public/f47ac10b-58cc-4372-a567-0e02b2c3d479"
           }
         },
         "required": [
@@ -260,7 +273,8 @@
           "status",
           "denialReason",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "publicUrl"
         ]
       },
       "UpdateMdxRequest": {

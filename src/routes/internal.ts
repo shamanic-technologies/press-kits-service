@@ -162,8 +162,7 @@ router.get("/internal/email-data/:orgId", async (req, res) => {
       return;
     }
 
-    const publicDomain = process.env.RAILWAY_PUBLIC_DOMAIN || "press-kits.distribute.you";
-    const pressKitUrl = kit.shareToken ? `https://${publicDomain}/public/${kit.shareToken}` : null;
+    const pressKitUrl = kit.shareToken ? `https://press-kits.distribute.you/public/${kit.shareToken}` : null;
 
     res.json({
       status: kit.status,

@@ -62,6 +62,10 @@ export const MediaKitResponseSchema = z
     }),
     createdAt: z.string().openapi({ example: "2026-03-29T10:00:00.000Z" }),
     updatedAt: z.string().openapi({ example: "2026-03-29T10:05:00.000Z" }),
+    publicUrl: z.string().nullable().openapi({
+      description: "Full public URL for the press kit page. Ready to open in a browser.",
+      example: "https://press-kits.distribute.you/public/f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    }),
   })
   .openapi("MediaKitResponse");
 
