@@ -328,7 +328,7 @@ router.post("/media-kits", async (req, res) => {
       parentRunId: req.runId,
       ctx,
     })
-      .then(() => generatePressKit(kitId))
+      .then(() => generatePressKit(kitId, ctx))
       .catch(async (err) => {
         console.error("[press-kits-service] Generation failed:", err);
         try {
