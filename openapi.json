@@ -37,6 +37,102 @@
           "archived"
         ]
       },
+      "MediaKitSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "workflowSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "shareToken": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "iconUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentMediaKitId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MediaKitStatus"
+          },
+          "denialReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "contentExcerpt": {
+            "type": "string",
+            "nullable": true,
+            "description": "First ~200 characters of the MDX content, stripped of markup. Useful for card/grid previews.",
+            "example": "Acme Corp is a leading provider of innovative solutions in the SaaS space, serving over 10,000 customers worldwide..."
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "brandId",
+          "campaignId",
+          "featureSlug",
+          "workflowSlug",
+          "shareToken",
+          "title",
+          "iconUrl",
+          "parentMediaKitId",
+          "status",
+          "denialReason",
+          "createdAt",
+          "updatedAt",
+          "contentExcerpt"
+        ]
+      },
+      "MediaKitListResponse": {
+        "type": "object",
+        "properties": {
+          "mediaKits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaKitSummary"
+            }
+          }
+        },
+        "required": [
+          "mediaKits"
+        ]
+      },
       "MediaKitResponse": {
         "type": "object",
         "properties": {
@@ -115,20 +211,6 @@
           "denialReason",
           "createdAt",
           "updatedAt"
-        ]
-      },
-      "MediaKitListResponse": {
-        "type": "object",
-        "properties": {
-          "mediaKits": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaKitResponse"
-            }
-          }
-        },
-        "required": [
-          "mediaKits"
         ]
       },
       "ErrorResponse": {
