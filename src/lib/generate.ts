@@ -1,10 +1,16 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
-import { generate } from "./content-generation-client.js";
+import { complete } from "./chat-client.js";
 import type { ContextHeaders } from "../middleware/auth.js";
 
-const PROMPT_TYPE = "generate-press-kit";
+const SYSTEM_PROMPT = [
+  "You are a professional press kit writer. Generate a press kit in MDX format.",
+  "The output must be valid MDX that can be rendered directly. Include sections like: Company Overview, Key Facts, Leadership, Products/Services, Press Contacts.",
+  "Use markdown headings (##), bold text, and bullet points for readability.",
+  "Do NOT include import statements or JSX components — only standard markdown syntax.",
+  "Output ONLY the MDX content, no explanations or wrapping.",
+].join("\n");
 
 interface GenerationData {
   currentKit: {
@@ -67,15 +73,44 @@ async function fetchGenerationData(mediaKitId: string): Promise<GenerationData |
   };
 }
 
-function extractTitle(html: string): string {
-  // Try extracting from h1/h2 tags in HTML
-  const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+function buildMessage(data: GenerationData): string {
+  const parts: string[] = [];
+
+  if (data.currentKit.mdxPageContent) {
+    parts.push(
+      "--- EXISTING PRESS KIT CONTENT (use as base, apply edits requested below) ---",
+      data.currentKit.mdxPageContent,
+      "--- END EXISTING CONTENT ---",
+      "",
+    );
+  }
+
+  if (data.instructions.length > 0) {
+    parts.push("--- USER INSTRUCTIONS ---");
+    for (const inst of data.instructions) {
+      parts.push(`[${inst.instructionType}] ${inst.instruction}`);
+    }
+    parts.push("--- END INSTRUCTIONS ---", "");
+  }
+
+  if (data.feedbacks.length > 0) {
+    parts.push("--- PREVIOUS FEEDBACK (avoid these issues) ---");
+    for (const fb of data.feedbacks) {
+      parts.push(`- ${fb.denialReason}`);
+    }
+    parts.push("--- END FEEDBACK ---", "");
+  }
+
+  parts.push("Generate the full press kit MDX content now.");
+
+  return parts.join("\n");
+}
+
+function extractTitle(mdx: string): string {
+  const h1 = mdx.match(/^#\s+(.+)$/m);
   if (h1) return h1[1].trim();
-  const h2 = html.match(/<h2[^>]*>([^<]+)<\/h2>/i);
+  const h2 = mdx.match(/^##\s+(.+)$/m);
   if (h2) return h2[1].trim();
-  // Try markdown headings (in case bodyHtml contains markdown)
-  const mdH1 = html.match(/^#\s+(.+)$/m);
-  if (mdH1) return mdH1[1].trim();
   return "Press Kit";
 }
 
@@ -88,35 +123,20 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
 
   console.log(`[press-kits-service] Starting generation for kit ${mediaKitId}`);
 
-  // Build variables for the prompt template
-  const instructionsText = data.instructions
-    .map((i) => `[${i.instructionType}] ${i.instruction}`)
-    .join("\n");
+  const message = buildMessage(data);
 
-  const feedbacksText = data.feedbacks
-    .map((f) => `- ${f.denialReason}`)
-    .join("\n");
-
-  const variables: Record<string, string | null> = {
-    existingContent: data.currentKit.mdxPageContent,
-    instructions: instructionsText || null,
-    feedbacks: feedbacksText || null,
-  };
-
-  const result = await generate(
+  const result = await complete(
     {
-      type: PROMPT_TYPE,
-      variables,
-      brandId: data.currentKit.brandId ?? undefined,
-      campaignId: data.currentKit.campaignId ?? undefined,
+      message,
+      systemPrompt: SYSTEM_PROMPT,
+      maxTokens: 8192,
     },
     ctx,
   );
 
-  // Use the first step's bodyHtml as the MDX content
-  const mdxContent = result.sequence?.[0]?.bodyHtml ?? "";
+  const mdxContent = result.content;
   if (!mdxContent.trim()) {
-    throw new Error("Content generation service returned empty content");
+    throw new Error("Chat service returned empty content");
   }
 
   const title = extractTitle(mdxContent);
