@@ -16,10 +16,12 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string"
+            "type": "string",
+            "example": "ok"
           },
           "service": {
-            "type": "string"
+            "type": "string",
+            "example": "press-kits-service"
           }
         },
         "required": [
@@ -36,65 +38,81 @@
           "denied",
           "failed",
           "archived"
-        ]
+        ],
+        "description": "drafted = generation complete, pending review. generating = workflow in progress. validated = approved and live. denied = rejected by user. failed = generation error or timeout. archived = superseded by a newer version."
       },
       "MediaKitSummary": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           },
           "orgId": {
-            "type": "string"
+            "type": "string",
+            "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
           },
           "brandId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
           },
           "campaignId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "c7d8e9f0-a1b2-3456-cdef-789012345678"
           },
           "featureSlug": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "press-kit-v2"
           },
           "workflowSlug": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "generate-press-kit"
           },
           "shareToken": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Public share token. Use with GET /public/{token} to access the kit without authentication.",
+            "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
           },
           "title": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "Acme Corp Press Kit — Q1 2026"
           },
           "iconUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "https://cdn.example.com/brands/acme/icon.png"
           },
           "parentMediaKitId": {
             "type": "string",
             "nullable": true,
             "format": "uuid",
-            "description": "ID of the kit this version was forked from. Forms a linked list of versions. Null for the first kit in a scope."
+            "description": "ID of the kit this version was forked from. Forms a linked list of versions. Null for the first kit in a scope.",
+            "example": null
           },
           "status": {
             "$ref": "#/components/schemas/MediaKitStatus"
           },
           "denialReason": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Reason for denial (when status is 'denied') or failure message (when status is 'failed').",
+            "example": null
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "example": "2026-03-29T10:00:00.000Z"
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "example": "2026-03-29T10:05:00.000Z"
           },
           "contentExcerpt": {
             "type": "string",
@@ -135,67 +153,96 @@
           "mediaKits"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Media kit not found"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "MediaKitResponse": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           },
           "orgId": {
-            "type": "string"
+            "type": "string",
+            "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
           },
           "brandId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
           },
           "campaignId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "c7d8e9f0-a1b2-3456-cdef-789012345678"
           },
           "featureSlug": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "press-kit-v2"
           },
           "workflowSlug": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "generate-press-kit"
           },
           "shareToken": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Public share token. Use with GET /public/{token} to access the kit without authentication.",
+            "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
           },
           "title": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "Acme Corp Press Kit — Q1 2026"
           },
           "iconUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "https://cdn.example.com/brands/acme/icon.png"
           },
           "mdxPageContent": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Full MDX content of the press kit page.",
+            "example": "# Acme Corp\n\nAcme Corp is a leading provider of innovative SaaS solutions..."
           },
           "parentMediaKitId": {
             "type": "string",
             "nullable": true,
             "format": "uuid",
-            "description": "ID of the kit this version was forked from. Forms a linked list of versions. Null for the first kit in a scope."
+            "description": "ID of the kit this version was forked from. Forms a linked list of versions. Null for the first kit in a scope.",
+            "example": null
           },
           "status": {
             "$ref": "#/components/schemas/MediaKitStatus"
           },
           "denialReason": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Reason for denial (when status is 'denied') or failure message (when status is 'failed').",
+            "example": null
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "example": "2026-03-29T10:00:00.000Z"
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "example": "2026-03-29T10:05:00.000Z"
           }
         },
         "required": [
@@ -216,22 +263,12 @@
           "updatedAt"
         ]
       },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
       "UpdateMdxRequest": {
         "type": "object",
         "properties": {
           "mdxContent": {
-            "type": "string"
+            "type": "string",
+            "example": "# Updated Press Kit\n\nNew content goes here..."
           }
         },
         "required": [
@@ -242,10 +279,19 @@
         "type": "object",
         "properties": {
           "status": {
-            "$ref": "#/components/schemas/MediaKitStatus"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKitStatus"
+              },
+              {
+                "example": "denied"
+              }
+            ]
           },
           "denialReason": {
-            "type": "string"
+            "type": "string",
+            "description": "Required when setting status to 'denied'. Explains why the kit was rejected.",
+            "example": "Tone is too informal for our brand guidelines"
           }
         },
         "required": [
@@ -258,11 +304,13 @@
           "mediaKitId": {
             "type": "string",
             "format": "uuid",
-            "description": "Target a specific media kit. If omitted, the latest active kit in the scope (org + brand + campaign) is used. If no kit exists, a new one is created from scratch."
+            "description": "Target a specific media kit. If omitted, the latest active kit in the scope (org + brand + campaign) is used. If no kit exists, a new one is created from scratch.",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           },
           "instruction": {
             "type": "string",
-            "description": "User instruction for the generation workflow (e.g. 'Make it more concise', 'Add a sustainability section')."
+            "description": "User instruction for the generation workflow.",
+            "example": "Create a professional press kit highlighting our Q1 2026 product launches and sustainability initiatives"
           }
         },
         "required": [
@@ -284,18 +332,22 @@
         "type": "object",
         "properties": {
           "totalViews": {
-            "type": "number"
+            "type": "number",
+            "example": 1250
           },
           "uniqueVisitors": {
-            "type": "number"
+            "type": "number",
+            "example": 843
           },
           "lastViewedAt": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "2026-03-29T14:32:00.000Z"
           },
           "firstViewedAt": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "2026-03-01T09:15:00.000Z"
           }
         },
         "required": [
@@ -315,17 +367,22 @@
               "properties": {
                 "key": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "Group key (country code, kit ID, or date depending on groupBy)",
+                  "example": "US"
                 },
                 "totalViews": {
-                  "type": "number"
+                  "type": "number",
+                  "example": 520
                 },
                 "uniqueVisitors": {
-                  "type": "number"
+                  "type": "number",
+                  "example": 340
                 },
                 "lastViewedAt": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "example": "2026-03-29T14:32:00.000Z"
                 }
               },
               "required": [
@@ -347,7 +404,8 @@
           "country",
           "mediaKitId",
           "day"
-        ]
+        ],
+        "description": "Group results by dimension. Omit for flat totals."
       },
       "GenerationDataResponse": {
         "type": "object",
@@ -420,19 +478,26 @@
         "properties": {
           "mediaKitId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Target kit ID. If omitted, finds the generating kit by orgId.",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           },
           "orgId": {
-            "type": "string"
+            "type": "string",
+            "description": "Org ID fallback when mediaKitId is not provided.",
+            "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
           },
           "mdxContent": {
-            "type": "string"
+            "type": "string",
+            "example": "# Generated Press Kit\n\nContent produced by the generation workflow..."
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "example": "Acme Corp Press Kit — Q1 2026"
           },
           "iconUrl": {
-            "type": "string"
+            "type": "string",
+            "example": "https://cdn.example.com/brands/acme/icon.png"
           }
         },
         "required": [
@@ -448,21 +513,26 @@
                 "$ref": "#/components/schemas/MediaKitStatus"
               },
               {
-                "nullable": true
+                "nullable": true,
+                "example": "validated"
               }
             ]
           },
           "title": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "Acme Corp Press Kit — Q1 2026"
           },
           "pressKitUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Public URL path for the press kit.",
+            "example": "/public/f47ac10b-58cc-4372-a567-0e02b2c3d479"
           },
           "content": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "example": "# Acme Corp\n\nLeading SaaS provider..."
           }
         },
         "required": [
@@ -506,13 +576,16 @@
     "/media-kits": {
       "get": {
         "summary": "List media kits",
+        "description": "Returns active media kits (validated, drafted, generating). At least one filter is required. Results are sorted by status priority (validated first) then by most recently updated.",
         "tags": [
           "Media Kits"
         ],
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter by org UUID. At least one of org_id, campaign_id, or brand_id is required.",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
             },
             "required": false,
             "name": "org_id",
@@ -520,7 +593,9 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Case-insensitive title search (partial match)",
+              "example": "Q1 2026"
             },
             "required": false,
             "name": "title",
@@ -528,7 +603,9 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter by campaign UUID",
+              "example": "c7d8e9f0-a1b2-3456-cdef-789012345678"
             },
             "required": false,
             "name": "campaign_id",
@@ -536,11 +613,43 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter by brand UUID",
+              "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
             },
             "required": false,
             "name": "brand_id",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -553,6 +662,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -561,6 +680,74 @@
         "description": "Triggers a generation workflow for a media kit. The behavior depends on the current state:\n\n**No existing kit in scope** → Creates a new kit with `status: generating` and `parentMediaKitId: null`.\n\n**Existing kit is `validated` or `drafted`** → **Forks**: creates a NEW kit (new UUID) with `status: generating`, copying the content (title, icon, MDX) from the original. The new kit's `parentMediaKitId` points to the original, preserving full version history. The original kit is NOT modified or archived at this stage.\n\n**Existing kit is `generating`** → Updates the existing generating kit in place (adds the instruction, refreshes context headers). No new kit is created.\n\nScope is determined by `x-org-id` + `x-brand-id` + `x-campaign-id` headers. Pass `mediaKitId` in the body to target a specific kit instead of auto-resolving by scope.\n\nTo validate the generated result and archive the previous version, call `POST /media-kits/{id}/validate`. To discard the generating kit and restore the parent, call `POST /media-kits/{id}/cancel`.",
         "tags": [
           "Media Kits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID — scopes kit to a specific brand"
+            },
+            "required": false,
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign UUID — scopes kit to a specific campaign"
+            },
+            "required": false,
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (e.g. 'press-kit-v2')"
+            },
+            "required": false,
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug override for generation"
+            },
+            "required": false,
+            "name": "x-workflow-slug",
+            "in": "header"
+          }
         ],
         "requestBody": {
           "content": {
@@ -598,6 +785,7 @@
     "/media-kits/{id}": {
       "get": {
         "summary": "Get media kit by ID",
+        "description": "Returns full media kit including MDX content. Kits stuck in 'generating' for over 30 minutes are automatically transitioned to 'failed'.",
         "tags": [
           "Media Kits"
         ],
@@ -610,6 +798,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -639,6 +857,7 @@
     "/media-kits/{id}/mdx": {
       "patch": {
         "summary": "Update MDX content",
+        "description": "Directly update the MDX page content of a media kit. Typically used for manual edits after generation.",
         "tags": [
           "Media Kits"
         ],
@@ -651,6 +870,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -689,6 +938,7 @@
     "/media-kits/{id}/status": {
       "patch": {
         "summary": "Update media kit status",
+        "description": "Manually update a kit's status. Use 'denied' with a denialReason to reject a kit for rework.",
         "tags": [
           "Media Kits"
         ],
@@ -701,6 +951,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -739,6 +1019,7 @@
     "/media-kits/{id}/validate": {
       "post": {
         "summary": "Validate media kit",
+        "description": "Approves the kit and sets it to 'validated'. Automatically archives any previously validated kit in the same scope (org + campaign). Sends a press_kit_ready email notification.",
         "tags": [
           "Media Kits"
         ],
@@ -751,6 +1032,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -780,6 +1091,7 @@
     "/media-kits/{id}/cancel": {
       "post": {
         "summary": "Cancel draft media kit",
+        "description": "Deletes the generating/drafted kit. If the kit was forked from a parent, the parent is restored to 'drafted' status.",
         "tags": [
           "Media Kits"
         ],
@@ -792,6 +1104,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -868,7 +1210,8 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "Filter by brand UUID"
             },
             "required": false,
             "name": "brandId",
@@ -877,7 +1220,8 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "Filter by campaign UUID"
             },
             "required": false,
             "name": "campaignId",
@@ -886,7 +1230,8 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "Filter by specific media kit UUID"
             },
             "required": false,
             "name": "mediaKitId",
@@ -895,7 +1240,9 @@
           {
             "schema": {
               "type": "string",
-              "format": "date-time"
+              "format": "date-time",
+              "description": "Start of date range (ISO 8601)",
+              "example": "2026-03-01T00:00:00Z"
             },
             "required": false,
             "name": "from",
@@ -904,7 +1251,9 @@
           {
             "schema": {
               "type": "string",
-              "format": "date-time"
+              "format": "date-time",
+              "description": "End of date range (ISO 8601)",
+              "example": "2026-03-31T23:59:59Z"
             },
             "required": false,
             "name": "to",
@@ -917,6 +1266,36 @@
             "required": false,
             "name": "groupBy",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -942,18 +1321,51 @@
     },
     "/admin/media-kits": {
       "get": {
-        "summary": "List all media kits",
+        "summary": "List all media kits (admin)",
+        "description": "Returns all media kits across all orgs. Supports text search on title.",
         "tags": [
           "Admin"
         ],
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Case-insensitive title search",
+              "example": "Acme"
             },
             "required": false,
             "name": "search",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -972,7 +1384,8 @@
     },
     "/admin/media-kits/{id}": {
       "delete": {
-        "summary": "Delete media kit",
+        "summary": "Delete media kit (admin)",
+        "description": "Permanently deletes a media kit and its associated instructions (cascade).",
         "tags": [
           "Admin"
         ],
@@ -985,6 +1398,36 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1021,14 +1464,16 @@
     },
     "/internal/media-kits/current": {
       "get": {
-        "summary": "Get latest media kit for scope (x-org-id + optional brand_id/campaign_id query params)",
+        "summary": "Get latest media kit for scope",
+        "description": "Returns the most recently updated media kit for the given org, optionally scoped by brand and campaign. Used by other services to check current press kit state.",
         "tags": [
           "Internal"
         ],
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter by brand UUID"
             },
             "required": false,
             "name": "brand_id",
@@ -1036,16 +1481,47 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter by campaign UUID"
             },
             "required": false,
             "name": "campaign_id",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
           "200": {
-            "description": "Media kit",
+            "description": "Media kit or null if none exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -1067,6 +1543,7 @@
     "/internal/media-kits/generation-data": {
       "get": {
         "summary": "Get data for generation workflow",
+        "description": "Returns the currently generating kit with its instructions and past denial feedbacks. Used by the generation workflow to build the LLM prompt.",
         "tags": [
           "Internal"
         ],
@@ -1074,11 +1551,42 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "Target a specific kit. If omitted, finds the generating kit for the org."
             },
             "required": false,
             "name": "media_kit_id",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1098,8 +1606,41 @@
     "/internal/media-kits/generation-result": {
       "post": {
         "summary": "Upsert generation result (workflow callback)",
+        "description": "Called by the generation workflow on success. Updates the generating kit with the produced MDX content and transitions it to 'drafted' status.",
         "tags": [
           "Internal"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
+          }
         ],
         "requestBody": {
           "content": {
@@ -1112,11 +1653,21 @@
         },
         "responses": {
           "200": {
-            "description": "Upserted",
+            "description": "Kit updated to drafted",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MediaKitResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No generating kit found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1127,22 +1678,55 @@
     "/internal/email-data/{orgId}": {
       "get": {
         "summary": "Get press kit data for email templates",
+        "description": "Returns the validated press kit data for a given org. Used by transactional-email-service to populate email templates.",
         "tags": [
           "Internal"
         ],
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Internal org UUID",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
             },
             "required": true,
             "name": "orgId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
           }
         ],
         "responses": {
           "200": {
-            "description": "Email data",
+            "description": "Email data (all fields null if no validated kit exists)",
             "content": {
               "application/json": {
                 "schema": {
