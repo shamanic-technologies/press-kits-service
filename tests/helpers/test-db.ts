@@ -9,7 +9,7 @@ export async function cleanTestData(): Promise<void> {
 }
 
 export async function insertTestMediaKit(
-  data: Partial<NewMediaKit> & { orgId: string; status: NewMediaKit["status"] }
+  data: Partial<NewMediaKit> & { orgId: string; status: NewMediaKit["status"] } & { updatedAt?: Date }
 ) {
   const [kit] = await db
     .insert(mediaKits)
@@ -25,6 +25,7 @@ export async function insertTestMediaKit(
       parentMediaKitId: data.parentMediaKitId ?? null,
       status: data.status,
       denialReason: data.denialReason ?? null,
+      ...(data.updatedAt ? { updatedAt: data.updatedAt } : {}),
     })
     .returning();
   return kit;

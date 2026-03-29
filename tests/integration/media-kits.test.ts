@@ -147,6 +147,55 @@ describe("Media Kits", () => {
     });
   });
 
+  describe("auto-expiry of stale generating kits", () => {
+    it("expires kit stuck in generating for over 30 minutes", async () => {
+      const staleTime = new Date(Date.now() - 31 * 60 * 1000); // 31 minutes ago
+      const kit = await insertTestMediaKit({
+        orgId: "org_stale",
+        status: "generating",
+        updatedAt: staleTime,
+      });
+
+      const res = await request(app).get(`/media-kits/${kit.id}`).set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("failed");
+      expect(res.body.denialReason).toBe("Generation timed out");
+    });
+
+    it("does not expire recent generating kit", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_fresh",
+        status: "generating",
+      });
+
+      const res = await request(app).get(`/media-kits/${kit.id}`).set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("generating");
+    });
+
+    it("expires stale kits when listing", async () => {
+      const staleTime = new Date(Date.now() - 31 * 60 * 1000);
+      await insertTestMediaKit({
+        orgId: "org_list_stale",
+        status: "generating",
+        updatedAt: staleTime,
+      });
+      await insertTestMediaKit({
+        orgId: "org_list_stale",
+        status: "validated",
+      });
+
+      const res = await request(app).get("/media-kits?org_id=org_list_stale").set(headers);
+
+      expect(res.status).toBe(200);
+      // The stale generating kit should now be "failed" and excluded from active list
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].status).toBe("validated");
+    });
+  });
+
   describe("GET /media-kits/:id", () => {
     it("returns kit by id", async () => {
       const kit = await insertTestMediaKit({ orgId: "org_3", title: "My Kit", status: "drafted" });

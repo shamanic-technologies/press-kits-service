@@ -14,6 +14,7 @@ export const mediaKitStatusEnum = pgEnum("media_kit_status", [
   "generating",
   "validated",
   "denied",
+  "failed",
   "archived",
 ]);
 
