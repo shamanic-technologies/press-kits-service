@@ -27,7 +27,7 @@ router.get("/media-kits/stats/views", async (req, res) => {
     const q = req.query as Record<string, string | undefined>;
 
     const conditions: string[] = ["mk.org_id = $1"];
-    const params: unknown[] = [orgId];
+    const params: (string | number)[] = [orgId];
     let idx = 2;
 
     if (q.brandId) {
