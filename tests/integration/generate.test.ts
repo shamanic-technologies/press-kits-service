@@ -15,12 +15,22 @@ vi.mock("../../src/lib/chat-client.js", () => ({
   complete: (...args: unknown[]) => mockComplete(...args),
 }));
 
+// Mock the brand client
+const mockGetBrand = vi.fn();
+const mockExtractBrandFields = vi.fn();
+vi.mock("../../src/lib/brand-client.js", () => ({
+  getBrand: (...args: unknown[]) => mockGetBrand(...args),
+  extractBrandFields: (...args: unknown[]) => mockExtractBrandFields(...args),
+}));
+
 const { generatePressKit } = await import("../../src/lib/generate.js");
 
 describe("generatePressKit", () => {
   beforeEach(async () => {
     await cleanTestData();
     mockComplete.mockReset();
+    mockGetBrand.mockReset();
+    mockExtractBrandFields.mockReset();
   });
 
   afterAll(async () => {
@@ -155,5 +165,147 @@ describe("generatePressKit", () => {
     const callArgs = mockComplete.mock.calls[0][0];
     expect(callArgs.message).toContain("PREVIOUS FEEDBACK");
     expect(callArgs.message).toContain("Too generic, needs more specifics");
+  });
+
+  it("fetches brand data when brandId is present and includes it in prompt", async () => {
+    const brandId = "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5";
+    const kit = await insertTestMediaKit({
+      orgId: "org-brand",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit",
+      instructionType: "initial",
+    });
+
+    mockGetBrand.mockResolvedValue({
+      id: brandId,
+      name: "Polarity Course",
+      domain: "polaritycourse.com",
+      brandUrl: "https://polaritycourse.com",
+      elevatorPitch: "Online courses for personal development",
+      bio: "Polarity Course is an ed-tech platform.",
+      mission: "Empowering learners worldwide",
+      location: "San Francisco, CA",
+      categories: "Education, E-Learning",
+      logoUrl: "https://polaritycourse.com/logo.png",
+    });
+
+    mockExtractBrandFields.mockResolvedValue([
+      { key: "company_name", value: "Polarity Course", cached: false },
+      { key: "founding_year", value: "2021", cached: false },
+      { key: "headquarters", value: "San Francisco, CA", cached: false },
+      { key: "industry", value: "Education Technology", cached: false },
+      { key: "leadership_team", value: "Jane Doe, CEO; John Smith, CTO", cached: false },
+      { key: "products_and_services", value: ["Self-paced courses", "Live workshops", "Coaching"], cached: false },
+    ]);
+
+    mockComplete.mockResolvedValue({
+      content: "# Polarity Course Press Kit\n\n## Company Overview\n\nPolarity Course is an ed-tech platform.",
+      tokensInput: 500,
+      tokensOutput: 300,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    // Verify brand-service was called
+    expect(mockGetBrand).toHaveBeenCalledWith(brandId, undefined);
+    expect(mockExtractBrandFields).toHaveBeenCalledWith(
+      brandId,
+      expect.arrayContaining([
+        expect.objectContaining({ key: "company_name" }),
+        expect.objectContaining({ key: "leadership_team" }),
+        expect.objectContaining({ key: "products_and_services" }),
+      ]),
+      undefined,
+    );
+
+    // Verify prompt includes brand data
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).toContain("BRAND DATA");
+    expect(callArgs.message).toContain("Polarity Course");
+    expect(callArgs.message).toContain("polaritycourse.com");
+    expect(callArgs.message).toContain("Education Technology");
+    expect(callArgs.message).toContain("Jane Doe, CEO");
+    expect(callArgs.message).toContain("Self-paced courses");
+
+    // Verify system prompt forbids placeholders
+    expect(callArgs.systemPrompt).toContain("NEVER use placeholder brackets");
+
+    // Verify kit was updated
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
+    expect(updated.title).toBe("Polarity Course Press Kit");
+  });
+
+  it("skips brand fetch when no brandId and still generates", async () => {
+    const kit = await insertTestMediaKit({
+      orgId: "org-no-brand",
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate a generic press kit",
+      instructionType: "initial",
+    });
+
+    mockComplete.mockResolvedValue({
+      content: "# Press Kit\n\n## Overview\n\nGeneric content.",
+      tokensInput: 50,
+      tokensOutput: 100,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    expect(mockGetBrand).not.toHaveBeenCalled();
+    expect(mockExtractBrandFields).not.toHaveBeenCalled();
+
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).not.toContain("BRAND DATA");
+  });
+
+  it("handles brand-service failure gracefully and still generates", async () => {
+    const brandId = "b1111111-1111-1111-1111-111111111111";
+    const kit = await insertTestMediaKit({
+      orgId: "org-brand-fail",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit",
+      instructionType: "initial",
+    });
+
+    // Brand service returns null/empty
+    mockGetBrand.mockResolvedValue(null);
+    mockExtractBrandFields.mockResolvedValue([]);
+
+    mockComplete.mockResolvedValue({
+      content: "# Press Kit\n\n## Overview\n\nContent here.",
+      tokensInput: 50,
+      tokensOutput: 100,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    // Should still generate even without brand data
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
+
+    // Brand data section should not be in the prompt
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).not.toContain("BRAND DATA");
   });
 });
