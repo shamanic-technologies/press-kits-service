@@ -120,6 +120,43 @@ const HealthResponseSchema = z
   .object({ status: z.string(), service: z.string() })
   .openapi("HealthResponse");
 
+// --- Stats Schemas ---
+
+const ViewStatsGroupByEnum = z.enum(["country", "mediaKitId", "day"]).openapi("ViewStatsGroupBy");
+
+export const ViewStatsQuerySchema = z
+  .object({
+    brandId: z.string().uuid().optional(),
+    campaignId: z.string().uuid().optional(),
+    mediaKitId: z.string().uuid().optional(),
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
+    groupBy: ViewStatsGroupByEnum.optional(),
+  })
+  .openapi("ViewStatsQuery");
+
+export const ViewStatsFlatResponseSchema = z
+  .object({
+    totalViews: z.number(),
+    uniqueVisitors: z.number(),
+    lastViewedAt: z.string().nullable(),
+    firstViewedAt: z.string().nullable(),
+  })
+  .openapi("ViewStatsFlatResponse");
+
+export const ViewStatsGroupedResponseSchema = z
+  .object({
+    groups: z.array(
+      z.object({
+        key: z.string().nullable(),
+        totalViews: z.number(),
+        uniqueVisitors: z.number(),
+        lastViewedAt: z.string().nullable(),
+      })
+    ),
+  })
+  .openapi("ViewStatsGroupedResponse");
+
 // --- Register Paths ---
 
 // Health
@@ -252,6 +289,28 @@ registry.registerPath({
   responses: {
     200: { description: "Public media kit", content: { "application/json": { schema: PublicMediaKitResponseSchema } } },
     404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
+  },
+});
+
+// Stats
+registry.registerPath({
+  method: "get",
+  path: "/media-kits/stats/views",
+  summary: "Get view stats for media kits",
+  description: "Returns aggregated view stats for the org's media kits. Supports filters (brandId, campaignId, mediaKitId, date range) and optional groupBy (country, mediaKitId, day). Without groupBy returns flat totals; with groupBy returns grouped results.",
+  tags: ["Stats"],
+  request: {
+    query: ViewStatsQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "View stats (flat or grouped depending on groupBy param)",
+      content: {
+        "application/json": {
+          schema: z.union([ViewStatsFlatResponseSchema, ViewStatsGroupedResponseSchema]),
+        },
+      },
+    },
   },
 });
 

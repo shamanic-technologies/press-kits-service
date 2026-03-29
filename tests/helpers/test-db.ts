@@ -1,8 +1,9 @@
 import { db, sql } from "../../src/db/index.js";
-import { mediaKits, mediaKitInstructions } from "../../src/db/schema.js";
-import type { NewMediaKit, NewMediaKitInstruction } from "../../src/db/schema.js";
+import { mediaKits, mediaKitInstructions, mediaKitViews } from "../../src/db/schema.js";
+import type { NewMediaKit, NewMediaKitInstruction, NewMediaKitView } from "../../src/db/schema.js";
 
 export async function cleanTestData(): Promise<void> {
+  await db.delete(mediaKitViews);
   await db.delete(mediaKitInstructions);
   await db.delete(mediaKits);
 }
@@ -45,6 +46,22 @@ export async function insertTestInstruction(
     })
     .returning();
   return inst;
+}
+
+export async function insertTestView(
+  data: Partial<NewMediaKitView> & { mediaKitId: string }
+) {
+  const [view] = await db
+    .insert(mediaKitViews)
+    .values({
+      mediaKitId: data.mediaKitId,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+      country: data.country ?? null,
+      viewedAt: data.viewedAt ?? new Date(),
+    })
+    .returning();
+  return view;
 }
 
 export async function closeDb(): Promise<void> {

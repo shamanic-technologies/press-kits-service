@@ -6,6 +6,7 @@ import mediaKitsRoutes from "../../src/routes/media-kits.js";
 import publicRoutes from "../../src/routes/public.js";
 import adminRoutes from "../../src/routes/admin.js";
 import internalRoutes from "../../src/routes/internal.js";
+import statsRoutes from "../../src/routes/stats.js";
 
 export function createTestApp(): express.Express {
   const app = express();
@@ -20,6 +21,7 @@ export function createTestApp(): express.Express {
   app.use(requireIdentityHeaders);
   app.use(trackRun);
   app.use(mediaKitsRoutes);
+  app.use(statsRoutes);
   app.use(adminRoutes);
   app.use(internalRoutes);
 

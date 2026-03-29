@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
+import geoip from "geoip-lite";
 import { db } from "../db/index.js";
-import { mediaKits } from "../db/schema.js";
+import { mediaKits, mediaKitViews } from "../db/schema.js";
 
 const router = Router();
 
@@ -26,9 +27,24 @@ router.get("/public/:token", async (req, res) => {
       return;
     }
 
+    // Track view (fire-and-forget)
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.socket.remoteAddress
+      || null;
+    const geo = ip ? geoip.lookup(ip) : null;
+
+    db.insert(mediaKitViews)
+      .values({
+        mediaKitId: kit.id,
+        ipAddress: ip,
+        userAgent: (req.headers["user-agent"] as string) ?? null,
+        country: geo?.country ?? null,
+      })
+      .catch((err) => console.error("[press-kits-service] Failed to track view:", err));
+
     res.json({ mediaKit: kit });
   } catch (err) {
-    console.error("GET /public/:token error:", err);
+    console.error("[press-kits-service] GET /public/:token error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
