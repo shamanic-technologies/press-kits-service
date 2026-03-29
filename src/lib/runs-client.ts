@@ -57,3 +57,22 @@ export async function addCosts(
 ): Promise<void> {
   await runsRequest(`/v1/runs/${runId}/costs`, { method: "POST", body: { items }, ctx });
 }
+
+export interface RunCost {
+  runId: string;
+  totalCostInUsdCents: string;
+  actualCostInUsdCents: string;
+  provisionedCostInUsdCents: string;
+}
+
+export async function batchGetCosts(
+  runIds: string[],
+  ctx?: ContextHeaders
+): Promise<RunCost[]> {
+  if (runIds.length === 0) return [];
+  const result = await runsRequest<{ costs: RunCost[] }>(
+    "/v1/runs/costs/batch",
+    { method: "POST", body: { runIds }, ctx }
+  );
+  return result.costs;
+}

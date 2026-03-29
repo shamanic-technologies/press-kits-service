@@ -71,6 +71,13 @@
       "when": 1775246400000,
       "tag": "0009_add_failed_status",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775332800000,
+      "tag": "0010_add_media_kit_runs",
+      "breakpoints": true
     }
   ]
 }

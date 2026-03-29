@@ -396,6 +396,63 @@
         ],
         "description": "Group results by dimension. Omit for flat totals."
       },
+      "CostStatsGroup": {
+        "type": "object",
+        "properties": {
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "Group key dimensions"
+          },
+          "totalCostInUsdCents": {
+            "type": "number",
+            "example": 2050
+          },
+          "actualCostInUsdCents": {
+            "type": "number",
+            "example": 2050
+          },
+          "provisionedCostInUsdCents": {
+            "type": "number",
+            "example": 0
+          },
+          "runCount": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "dimensions",
+          "totalCostInUsdCents",
+          "actualCostInUsdCents",
+          "provisionedCostInUsdCents",
+          "runCount"
+        ]
+      },
+      "CostStatsResponse": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CostStatsGroup"
+            }
+          }
+        },
+        "required": [
+          "groups"
+        ]
+      },
+      "CostStatsGroupBy": {
+        "type": "string",
+        "enum": [
+          "mediaKitId"
+        ],
+        "description": "Group results by dimension. Omit for flat totals."
+      },
       "GenerationDataResponse": {
         "type": "object",
         "properties": {
@@ -1302,6 +1359,97 @@
                       "$ref": "#/components/schemas/ViewStatsGroupedResponse"
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media-kits/stats/costs": {
+      "get": {
+        "summary": "Get cost stats for media kit generations",
+        "description": "Returns aggregated generation/edit costs by querying runs-service for all runs associated with media kits. Supports filters (mediaKitId, brandId, campaignId) and optional groupBy (mediaKitId). Without groupBy returns flat totals; with groupBy returns grouped results.",
+        "tags": [
+          "Stats"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by specific media kit UUID"
+            },
+            "required": false,
+            "name": "mediaKitId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by brand UUID"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by campaign UUID"
+            },
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/CostStatsGroupBy"
+            },
+            "required": false,
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal org UUID from client-service",
+              "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
+            },
+            "required": true,
+            "name": "x-org-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal user UUID from client-service",
+              "example": "usr_7BXkm2pTq1wLnHyjRfK4d"
+            },
+            "required": true,
+            "name": "x-user-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run ID for tracing (from runs-service)",
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "x-run-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cost stats (flat or grouped depending on groupBy param)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostStatsResponse"
                 }
               }
             }

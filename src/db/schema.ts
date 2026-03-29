@@ -9,6 +9,11 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 
+export const mediaKitRunTypeEnum = pgEnum("media_kit_run_type", [
+  "generation",
+  "edit",
+]);
+
 export const mediaKitStatusEnum = pgEnum("media_kit_status", [
   "drafted",
   "generating",
@@ -79,9 +84,29 @@ export const mediaKitViews = pgTable(
   ]
 );
 
+export const mediaKitRuns = pgTable(
+  "media_kit_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mediaKitId: uuid("media_kit_id")
+      .references(() => mediaKits.id, { onDelete: "cascade" })
+      .notNull(),
+    runId: varchar("run_id").notNull(),
+    parentRunId: varchar("parent_run_id"),
+    runType: mediaKitRunTypeEnum("run_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_runs_media_kit_id").on(table.mediaKitId),
+    index("idx_runs_run_id").on(table.runId),
+  ]
+);
+
 export type MediaKit = typeof mediaKits.$inferSelect;
 export type NewMediaKit = typeof mediaKits.$inferInsert;
 export type MediaKitInstruction = typeof mediaKitInstructions.$inferSelect;
 export type NewMediaKitInstruction = typeof mediaKitInstructions.$inferInsert;
 export type MediaKitView = typeof mediaKitViews.$inferSelect;
 export type NewMediaKitView = typeof mediaKitViews.$inferInsert;
+export type MediaKitRun = typeof mediaKitRuns.$inferSelect;
+export type NewMediaKitRun = typeof mediaKitRuns.$inferInsert;

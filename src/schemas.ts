@@ -205,6 +205,35 @@ export const ViewStatsGroupedResponseSchema = z
   })
   .openapi("ViewStatsGroupedResponse");
 
+// --- Cost Stats Schemas ---
+
+const CostStatsGroupByEnum = z.enum(["mediaKitId"]).openapi("CostStatsGroupBy");
+
+export const CostStatsQuerySchema = z
+  .object({
+    mediaKitId: z.string().uuid().optional().openapi({ description: "Filter by specific media kit UUID" }),
+    brandId: z.string().uuid().optional().openapi({ description: "Filter by brand UUID" }),
+    campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign UUID" }),
+    groupBy: CostStatsGroupByEnum.optional().openapi({ description: "Group results by dimension. Omit for flat totals." }),
+  })
+  .openapi("CostStatsQuery");
+
+const CostStatsGroupSchema = z
+  .object({
+    dimensions: z.record(z.string(), z.string().nullable()).openapi({ description: "Group key dimensions" }),
+    totalCostInUsdCents: z.number().openapi({ example: 2050 }),
+    actualCostInUsdCents: z.number().openapi({ example: 2050 }),
+    provisionedCostInUsdCents: z.number().openapi({ example: 0 }),
+    runCount: z.number().openapi({ example: 3 }),
+  })
+  .openapi("CostStatsGroup");
+
+export const CostStatsResponseSchema = z
+  .object({
+    groups: z.array(CostStatsGroupSchema),
+  })
+  .openapi("CostStatsResponse");
+
 // --- Register Paths ---
 
 // Health
@@ -382,6 +411,25 @@ registry.registerPath({
           schema: z.union([ViewStatsFlatResponseSchema, ViewStatsGroupedResponseSchema]),
         },
       },
+    },
+  },
+});
+
+// Cost Stats
+registry.registerPath({
+  method: "get",
+  path: "/media-kits/stats/costs",
+  summary: "Get cost stats for media kit generations",
+  description: "Returns aggregated generation/edit costs by querying runs-service for all runs associated with media kits. Supports filters (mediaKitId, brandId, campaignId) and optional groupBy (mediaKitId). Without groupBy returns flat totals; with groupBy returns grouped results.",
+  tags: ["Stats"],
+  request: {
+    headers: requiredHeaders,
+    query: CostStatsQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Cost stats (flat or grouped depending on groupBy param)",
+      content: { "application/json": { schema: CostStatsResponseSchema } },
     },
   },
 });
