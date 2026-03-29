@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull } from "drizzle-orm";
+import { eq, and, inArray, ilike, sql as drizzleSql, desc, isNull, lt } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import {
@@ -15,6 +15,36 @@ import { getContextHeaders } from "../middleware/auth.js";
 const router = Router();
 
 const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
+
+/** Max time a kit can stay in "generating" before being auto-expired to "failed". */
+const GENERATION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Expire any kits stuck in "generating" past the timeout. Fire-and-forget. */
+async function expireStaleGeneratingKits(): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - GENERATION_TIMEOUT_MS);
+    const expired = await db
+      .update(mediaKits)
+      .set({
+        status: "failed",
+        denialReason: "Generation timed out",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(mediaKits.status, "generating"),
+          lt(mediaKits.updatedAt, cutoff),
+        )
+      )
+      .returning({ id: mediaKits.id });
+
+    if (expired.length > 0) {
+      console.log(`[press-kits-service] Auto-expired ${expired.length} stale generating kit(s): ${expired.map((k) => k.id).join(", ")}`);
+    }
+  } catch (err) {
+    console.error("[press-kits-service] Failed to expire stale generating kits:", err);
+  }
+}
 
 const EXCERPT_LENGTH = 200;
 
@@ -41,6 +71,7 @@ function extractContentExcerpt(mdx: string | null): string | null {
 // GET /media-kits — list kits for an org
 router.get("/media-kits", async (req, res) => {
   try {
+    await expireStaleGeneratingKits();
     const orgIdParam = req.query.org_id as string | undefined;
     const titleFilter = req.query.title as string | undefined;
     const campaignIdFilter = req.query.campaign_id as string | undefined;
@@ -96,6 +127,7 @@ router.get("/media-kits", async (req, res) => {
 // GET /media-kits/:id
 router.get("/media-kits/:id", async (req, res) => {
   try {
+    await expireStaleGeneratingKits();
     const kit = await db.query.mediaKits.findFirst({
       where: eq(mediaKits.id, req.params.id),
     });
@@ -309,7 +341,7 @@ router.post("/media-kits", async (req, res) => {
           await db
             .update(mediaKits)
             .set({
-              status: "denied",
+              status: "failed",
               denialReason: `Generation workflow failed to start: ${err instanceof Error ? err.message : String(err)}`,
               updatedAt: new Date(),
             })

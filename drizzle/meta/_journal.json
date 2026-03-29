@@ -64,6 +64,13 @@
       "when": 1775160000000,
       "tag": "0008_add_media_kit_views",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775246400000,
+      "tag": "0009_add_failed_status",
+      "breakpoints": true
     }
   ]
 }

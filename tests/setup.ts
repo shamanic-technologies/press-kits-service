@@ -36,4 +36,6 @@ beforeAll(async () => {
   await sql`CREATE INDEX IF NOT EXISTS idx_views_media_kit_id ON media_kit_views USING btree (media_kit_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_views_viewed_at ON media_kit_views USING btree (viewed_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_views_country ON media_kit_views USING btree (country)`;
+  // Add 'failed' status to enum
+  await sql`ALTER TYPE media_kit_status ADD VALUE IF NOT EXISTS 'failed'`;
 });

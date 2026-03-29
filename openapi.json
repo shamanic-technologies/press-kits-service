@@ -34,6 +34,7 @@
           "generating",
           "validated",
           "denied",
+          "failed",
           "archived"
         ]
       },
@@ -437,22 +438,6 @@
         "required": [
           "mdxContent"
         ]
-      },
-      "GenerationFailureRequest": {
-        "type": "object",
-        "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string",
-            "description": "Reason the generation failed (e.g. workflow timeout, LLM error). Stored as denialReason."
-          }
-        }
       },
       "EmailDataResponse": {
         "type": "object",
@@ -1132,46 +1117,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MediaKitResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/media-kits/generation-failure": {
-      "post": {
-        "summary": "Report generation failure (workflow failure callback)",
-        "description": "Called by the workflow service when a generation workflow fails or times out. Transitions the generating kit to denied status with the failure reason.",
-        "tags": [
-          "Internal"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerationFailureRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Kit marked as denied",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MediaKitResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No generating kit found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
