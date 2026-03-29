@@ -9,11 +9,10 @@ import {
   closeDb,
 } from "../helpers/test-db.js";
 
-// Mock the content-generation client
-const mockGenerate = vi.fn();
-vi.mock("../../src/lib/content-generation-client.js", () => ({
-  deployPrompts: vi.fn().mockResolvedValue(undefined),
-  generate: (...args: unknown[]) => mockGenerate(...args),
+// Mock the chat client
+const mockComplete = vi.fn();
+vi.mock("../../src/lib/chat-client.js", () => ({
+  complete: (...args: unknown[]) => mockComplete(...args),
 }));
 
 const { generatePressKit } = await import("../../src/lib/generate.js");
@@ -21,7 +20,7 @@ const { generatePressKit } = await import("../../src/lib/generate.js");
 describe("generatePressKit", () => {
   beforeEach(async () => {
     await cleanTestData();
-    mockGenerate.mockReset();
+    mockComplete.mockReset();
   });
 
   afterAll(async () => {
@@ -40,19 +39,11 @@ describe("generatePressKit", () => {
       instructionType: "initial",
     });
 
-    mockGenerate.mockResolvedValue({
-      id: "gen-1",
-      subject: "Press Kit",
-      sequence: [
-        {
-          step: 1,
-          bodyHtml: "# Acme Corp Press Kit\n\n## Overview\n\nAcme Corp is a leading provider of widgets.",
-          bodyText: "",
-          daysSinceLastStep: 0,
-        },
-      ],
+    mockComplete.mockResolvedValue({
+      content: "# Acme Corp Press Kit\n\n## Overview\n\nAcme Corp is a leading provider of widgets.",
       tokensInput: 100,
       tokensOutput: 200,
+      model: "claude-sonnet-4-6",
     });
 
     await generatePressKit(kit.id);
@@ -81,10 +72,10 @@ describe("generatePressKit", () => {
       .where(eq(mediaKits.id, kit.id));
 
     expect(unchanged.status).toBe("drafted");
-    expect(mockGenerate).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
   });
 
-  it("throws when content-generation returns empty content", async () => {
+  it("throws when chat service returns empty content", async () => {
     const kit = await insertTestMediaKit({
       orgId: "org-empty",
       status: "generating",
@@ -95,20 +86,19 @@ describe("generatePressKit", () => {
       instructionType: "initial",
     });
 
-    mockGenerate.mockResolvedValue({
-      id: "gen-2",
-      subject: "",
-      sequence: [{ step: 1, bodyHtml: "", bodyText: "", daysSinceLastStep: 0 }],
+    mockComplete.mockResolvedValue({
+      content: "",
       tokensInput: 10,
       tokensOutput: 0,
+      model: "claude-sonnet-4-6",
     });
 
     await expect(generatePressKit(kit.id)).rejects.toThrow(
-      "Content generation service returned empty content"
+      "Chat service returned empty content"
     );
   });
 
-  it("passes existing content as variable for edits", async () => {
+  it("includes existing content in message for edits", async () => {
     const kit = await insertTestMediaKit({
       orgId: "org-edit",
       status: "generating",
@@ -120,31 +110,23 @@ describe("generatePressKit", () => {
       instructionType: "edit",
     });
 
-    mockGenerate.mockResolvedValue({
-      id: "gen-3",
-      subject: "",
-      sequence: [
-        {
-          step: 1,
-          bodyHtml: "# Updated Kit\n\n## Overview\n\nOld content here.\n\n## Sustainability\n\nNew section.",
-          bodyText: "",
-          daysSinceLastStep: 0,
-        },
-      ],
+    mockComplete.mockResolvedValue({
+      content: "# Updated Kit\n\n## Overview\n\nOld content here.\n\n## Sustainability\n\nNew section.",
       tokensInput: 100,
       tokensOutput: 200,
+      model: "claude-sonnet-4-6",
     });
 
     await generatePressKit(kit.id);
 
-    // Verify variables passed to content-generation
-    const callArgs = mockGenerate.mock.calls[0][0];
-    expect(callArgs.type).toBe("generate-press-kit");
-    expect(callArgs.variables.existingContent).toContain("Old content here.");
-    expect(callArgs.variables.instructions).toContain("Add a sustainability section");
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).toContain("EXISTING PRESS KIT CONTENT");
+    expect(callArgs.message).toContain("Old content here.");
+    expect(callArgs.message).toContain("Add a sustainability section");
+    expect(callArgs.systemPrompt).toContain("press kit writer");
   });
 
-  it("passes feedbacks as variable", async () => {
+  it("includes previous denial feedback in message", async () => {
     await insertTestMediaKit({
       orgId: "org-fb",
       status: "denied",
@@ -161,19 +143,17 @@ describe("generatePressKit", () => {
       instructionType: "initial",
     });
 
-    mockGenerate.mockResolvedValue({
-      id: "gen-4",
-      subject: "",
-      sequence: [
-        { step: 1, bodyHtml: "# Detailed Press Kit\n\nContent here.", bodyText: "", daysSinceLastStep: 0 },
-      ],
+    mockComplete.mockResolvedValue({
+      content: "# Detailed Press Kit\n\nContent here.",
       tokensInput: 100,
       tokensOutput: 200,
+      model: "claude-sonnet-4-6",
     });
 
     await generatePressKit(kit.id);
 
-    const callArgs = mockGenerate.mock.calls[0][0];
-    expect(callArgs.variables.feedbacks).toContain("Too generic, needs more specifics");
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).toContain("PREVIOUS FEEDBACK");
+    expect(callArgs.message).toContain("Too generic, needs more specifics");
   });
 });
