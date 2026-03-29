@@ -204,6 +204,7 @@ describe("Media Kits", () => {
       expect(res.body.id).toBe(kit.id);
       expect(res.body.title).toBe("My Kit");
       expect(res.body.shareToken).toBeDefined();
+      expect(res.body.publicUrl).toBe(`https://press-kits.distribute.you/public/${res.body.shareToken}`);
     });
 
     it("returns 404 for unknown id", async () => {
@@ -262,6 +263,7 @@ describe("Media Kits", () => {
       expect(res.body.status).toBe("generating");
       expect(res.body.orgId).toBe("test-org-id");
       expect(res.body.shareToken).toBeDefined();
+      expect(res.body.publicUrl).toBe(`https://press-kits.distribute.you/public/${res.body.shareToken}`);
       expect(res.body.parentMediaKitId).toBeNull();
     });
 

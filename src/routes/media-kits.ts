@@ -17,6 +17,10 @@ const router = Router();
 
 const ACTIVE_STATUSES = ["validated", "drafted", "generating"] as const;
 
+function buildPublicUrl(shareToken: string | null): string | null {
+  return shareToken ? `https://press-kits.distribute.you/public/${shareToken}` : null;
+}
+
 /** Max time a kit can stay in "generating" before being auto-expired to "failed". */
 const GENERATION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -116,6 +120,7 @@ router.get("/media-kits", async (req, res) => {
     const summaries = results.map(({ mdxPageContent, ...rest }) => ({
       ...rest,
       contentExcerpt: extractContentExcerpt(mdxPageContent),
+      publicUrl: buildPublicUrl(rest.shareToken),
     }));
 
     res.json({ mediaKits: summaries });
@@ -138,7 +143,7 @@ router.get("/media-kits/:id", async (req, res) => {
       return;
     }
 
-    res.json(kit);
+    res.json({ ...kit, publicUrl: buildPublicUrl(kit.shareToken) });
   } catch (err) {
     console.error("GET /media-kits/:id error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -161,7 +166,7 @@ router.patch("/media-kits/:id/mdx", async (req, res) => {
       return;
     }
 
-    res.json(updated);
+    res.json({ ...updated, publicUrl: buildPublicUrl(updated.shareToken) });
   } catch (err) {
     console.error("PATCH /media-kits/:id/mdx error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
@@ -188,7 +193,7 @@ router.patch("/media-kits/:id/status", async (req, res) => {
       return;
     }
 
-    res.json(updated);
+    res.json({ ...updated, publicUrl: buildPublicUrl(updated.shareToken) });
   } catch (err) {
     console.error("PATCH /media-kits/:id/status error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
@@ -375,7 +380,7 @@ router.post("/media-kits", async (req, res) => {
           );
       });
 
-    res.json(generatingKit);
+    res.json({ ...generatingKit, publicUrl: buildPublicUrl(generatingKit.shareToken) });
   } catch (err) {
     console.error("POST /media-kits error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
@@ -435,7 +440,7 @@ router.post("/media-kits/:id/validate", async (req, res) => {
       metadata: { title: kit.title || "Press Kit" },
     }, ctx).catch((err) => console.error("Email send failed:", err));
 
-    res.json(kit);
+    res.json({ ...kit, publicUrl: buildPublicUrl(kit.shareToken) });
   } catch (err) {
     console.error("POST /media-kits/:id/validate error:", err);
     res.status(400).json({ error: err instanceof Error ? err.message : "Bad request" });
