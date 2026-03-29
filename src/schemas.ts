@@ -27,7 +27,10 @@ export const MediaKitResponseSchema = z
     title: z.string().nullable(),
     iconUrl: z.string().nullable(),
     mdxPageContent: z.string().nullable(),
-    parentMediaKitId: z.string().uuid().nullable(),
+    parentMediaKitId: z.string().uuid().nullable().openapi({
+      description:
+        "ID of the kit this version was forked from. Forms a linked list of versions. Null for the first kit in a scope.",
+    }),
     status: MediaKitStatusEnum,
     denialReason: z.string().nullable(),
     createdAt: z.string(),
@@ -54,8 +57,13 @@ export const UpdateStatusRequestSchema = z
 
 export const CreateMediaKitRequestSchema = z
   .object({
-    mediaKitId: z.string().uuid().optional(),
-    instruction: z.string(),
+    mediaKitId: z.string().uuid().optional().openapi({
+      description:
+        "Target a specific media kit. If omitted, the latest active kit in the scope (org + brand + campaign) is used. If no kit exists, a new one is created from scratch.",
+    }),
+    instruction: z.string().openapi({
+      description: "User instruction for the generation workflow (e.g. 'Make it more concise', 'Add a sustainability section').",
+    }),
   })
   .openapi("CreateMediaKitRequest");
 
@@ -189,8 +197,20 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/media-kits",
-  summary: "Create or edit a media kit",
-  description: "Idempotent create-or-edit. Scoped by x-org-id + x-brand-id + x-campaign-id headers. Finds the latest active kit in that scope, or creates a new one. Optionally pass mediaKitId in the body to target a specific kit.",
+  summary: "Create or edit a media kit (versioning via fork)",
+  description: [
+    "Triggers a generation workflow for a media kit. The behavior depends on the current state:",
+    "",
+    "**No existing kit in scope** → Creates a new kit with `status: generating` and `parentMediaKitId: null`.",
+    "",
+    "**Existing kit is `validated` or `drafted`** → **Forks**: creates a NEW kit (new UUID) with `status: generating`, copying the content (title, icon, MDX) from the original. The new kit's `parentMediaKitId` points to the original, preserving full version history. The original kit is NOT modified or archived at this stage.",
+    "",
+    "**Existing kit is `generating`** → Updates the existing generating kit in place (adds the instruction, refreshes context headers). No new kit is created.",
+    "",
+    "Scope is determined by `x-org-id` + `x-brand-id` + `x-campaign-id` headers. Pass `mediaKitId` in the body to target a specific kit instead of auto-resolving by scope.",
+    "",
+    "To validate the generated result and archive the previous version, call `POST /media-kits/{id}/validate`. To discard the generating kit and restore the parent, call `POST /media-kits/{id}/cancel`.",
+  ].join("\n"),
   tags: ["Media Kits"],
   request: { body: { content: { "application/json": { schema: CreateMediaKitRequestSchema } } } },
   responses: {
