@@ -174,13 +174,15 @@ const HealthResponseSchema = z
 
 // --- Stats Schemas ---
 
-const ViewStatsGroupByEnum = z.enum(["country", "mediaKitId", "day"]).openapi("ViewStatsGroupBy");
+const ViewStatsGroupByEnum = z.enum(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug"]).openapi("ViewStatsGroupBy");
 
 export const ViewStatsQuerySchema = z
   .object({
     brandId: z.string().uuid().optional().openapi({ description: "Filter by brand UUID" }),
     campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign UUID" }),
     mediaKitId: z.string().uuid().optional().openapi({ description: "Filter by specific media kit UUID" }),
+    featureSlug: z.string().optional().openapi({ description: "Filter by feature slug (e.g. 'press-kit-v2')" }),
+    workflowSlug: z.string().optional().openapi({ description: "Filter by workflow slug" }),
     from: z.string().datetime().optional().openapi({ description: "Start of date range (ISO 8601)", example: "2026-03-01T00:00:00Z" }),
     to: z.string().datetime().optional().openapi({ description: "End of date range (ISO 8601)", example: "2026-03-31T23:59:59Z" }),
     groupBy: ViewStatsGroupByEnum.optional().openapi({ description: "Group results by dimension. Omit for flat totals." }),
@@ -211,13 +213,15 @@ export const ViewStatsGroupedResponseSchema = z
 
 // --- Cost Stats Schemas ---
 
-const CostStatsGroupByEnum = z.enum(["mediaKitId"]).openapi("CostStatsGroupBy");
+const CostStatsGroupByEnum = z.enum(["mediaKitId", "brandId", "campaignId", "featureSlug", "workflowSlug"]).openapi("CostStatsGroupBy");
 
 export const CostStatsQuerySchema = z
   .object({
     mediaKitId: z.string().uuid().optional().openapi({ description: "Filter by specific media kit UUID" }),
     brandId: z.string().uuid().optional().openapi({ description: "Filter by brand UUID" }),
     campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign UUID" }),
+    featureSlug: z.string().optional().openapi({ description: "Filter by feature slug (e.g. 'press-kit-v2')" }),
+    workflowSlug: z.string().optional().openapi({ description: "Filter by workflow slug" }),
     groupBy: CostStatsGroupByEnum.optional().openapi({ description: "Group results by dimension. Omit for flat totals." }),
   })
   .openapi("CostStatsQuery");
