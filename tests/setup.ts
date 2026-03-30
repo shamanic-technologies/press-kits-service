@@ -59,4 +59,6 @@ beforeAll(async () => {
   // Drop dynasty slug columns (removed in favor of service-call resolution)
   await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS feature_dynasty_slug`;
   await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS workflow_dynasty_slug`;
+  // Add brand_domain column for logo.dev resolution
+  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS brand_domain text`;
 });

@@ -35,6 +35,7 @@ export const mediaKits = pgTable(
     shareToken: uuid("share_token").unique().defaultRandom(),
     title: text("title"),
     iconUrl: text("icon_url"),
+    brandDomain: text("brand_domain"),
     mdxPageContent: text("mdx_page_content"),
     parentMediaKitId: uuid("parent_media_kit_id"),
     status: mediaKitStatusEnum("status").notNull(),

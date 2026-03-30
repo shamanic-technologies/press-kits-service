@@ -37,6 +37,71 @@ describe("Public", () => {
       expect(res.text).toContain("This is a press kit.");
     });
 
+    it("renders modern layout with header and Inter font", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_modern",
+        title: "Modern Kit",
+        mdxPageContent: "# Modern Kit\n\nContent here.",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("fonts.googleapis.com");
+      expect(res.text).toContain("Inter");
+      expect(res.text).toContain('class="header"');
+      expect(res.text).toContain('class="page-title"');
+      expect(res.text).toContain("Press Kit");
+    });
+
+    it("shows brand logo from iconUrl in header", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_logo",
+        title: "Logo Kit",
+        iconUrl: "https://cdn.example.com/logo.png",
+        mdxPageContent: "# Logo Kit\n\nHas a logo.",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="brand-logo"');
+      expect(res.text).toContain("https://cdn.example.com/logo.png");
+    });
+
+    it("falls back to Google favicon via brandDomain when iconUrl is not set", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_domain",
+        title: "Domain Kit",
+        brandDomain: "example.com",
+        mdxPageContent: "# Domain Kit\n\nFallback logo.",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="brand-logo"');
+      expect(res.text).toContain("https://www.google.com/s2/favicons?domain=example.com");
+      expect(res.text).toContain('onerror="this.style.display=');
+    });
+
+    it("does not render logo when neither iconUrl nor brandDomain is set", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_nologo",
+        title: "No Logo Kit",
+        mdxPageContent: "# No Logo\n\nContent.",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('class="brand-logo"');
+    });
+
     it("escapes HTML in the title to prevent XSS", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_xss",
@@ -118,6 +183,22 @@ describe("Public", () => {
       expect(res.status).toBe(200);
       expect(res.text).toContain('rel="icon"');
       expect(res.text).toContain("https://cdn.example.com/icon.png");
+    });
+
+    it("escapes brandDomain in logo URL to prevent XSS", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_xss_domain",
+        title: "XSS Domain Kit",
+        brandDomain: '"><script>alert(1)</script>',
+        mdxPageContent: "# Test",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('<script>alert(1)</script>');
+      expect(res.text).toContain("&quot;");
     });
   });
 });

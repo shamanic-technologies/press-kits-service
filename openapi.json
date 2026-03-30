@@ -90,6 +90,12 @@
             "nullable": true,
             "example": "https://cdn.example.com/brands/acme/icon.png"
           },
+          "brandDomain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand domain used for logo resolution via logo.dev.",
+            "example": "acme.com"
+          },
           "parentMediaKitId": {
             "type": "string",
             "nullable": true,
@@ -137,6 +143,7 @@
           "shareToken",
           "title",
           "iconUrl",
+          "brandDomain",
           "parentMediaKitId",
           "status",
           "denialReason",
@@ -221,6 +228,12 @@
             "nullable": true,
             "example": "https://cdn.example.com/brands/acme/icon.png"
           },
+          "brandDomain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand domain used for logo resolution via logo.dev.",
+            "example": "acme.com"
+          },
           "mdxPageContent": {
             "type": "string",
             "nullable": true,
@@ -268,6 +281,7 @@
           "shareToken",
           "title",
           "iconUrl",
+          "brandDomain",
           "mdxPageContent",
           "parentMediaKitId",
           "status",
