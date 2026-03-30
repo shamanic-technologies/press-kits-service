@@ -269,11 +269,13 @@ router.post("/media-kits", async (req, res) => {
         .returning();
       generatingKit = newKit;
 
-      await db.insert(mediaKitInstructions).values({
-        mediaKitId: generatingKit.id,
-        instruction: body.instruction,
-        instructionType: "initial",
-      });
+      if (body.instruction) {
+        await db.insert(mediaKitInstructions).values({
+          mediaKitId: generatingKit.id,
+          instruction: body.instruction,
+          instructionType: "initial",
+        });
+      }
     } else if (currentKit.status === "validated" || currentKit.status === "drafted") {
       // Create copy with status=generating
       const [newKit] = await db
@@ -293,11 +295,13 @@ router.post("/media-kits", async (req, res) => {
         .returning();
       generatingKit = newKit;
 
-      await db.insert(mediaKitInstructions).values({
-        mediaKitId: generatingKit.id,
-        instruction: body.instruction,
-        instructionType: "initial",
-      });
+      if (body.instruction) {
+        await db.insert(mediaKitInstructions).values({
+          mediaKitId: generatingKit.id,
+          instruction: body.instruction,
+          instructionType: "initial",
+        });
+      }
     } else if (currentKit.status === "generating") {
       // Update timestamp + context fields
       const [updated] = await db
@@ -313,11 +317,13 @@ router.post("/media-kits", async (req, res) => {
         .returning();
       generatingKit = updated;
 
-      await db.insert(mediaKitInstructions).values({
-        mediaKitId: generatingKit.id,
-        instruction: body.instruction,
-        instructionType: "edit",
-      });
+      if (body.instruction) {
+        await db.insert(mediaKitInstructions).values({
+          mediaKitId: generatingKit.id,
+          instruction: body.instruction,
+          instructionType: "edit",
+        });
+      }
     } else {
       res.status(400).json({ error: `Cannot edit kit with status: ${currentKit.status}` });
       return;
