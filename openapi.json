@@ -406,7 +406,11 @@
         "enum": [
           "country",
           "mediaKitId",
-          "day"
+          "day",
+          "brandId",
+          "campaignId",
+          "featureSlug",
+          "workflowSlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
       },
@@ -463,7 +467,11 @@
       "CostStatsGroupBy": {
         "type": "string",
         "enum": [
-          "mediaKitId"
+          "mediaKitId",
+          "brandId",
+          "campaignId",
+          "featureSlug",
+          "workflowSlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
       },
@@ -1301,6 +1309,24 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by feature slug (e.g. 'press-kit-v2')"
+            },
+            "required": false,
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slug"
+            },
+            "required": false,
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "date-time",
               "description": "Start of date range (ISO 8601)",
               "example": "2026-03-01T00:00:00Z"
@@ -1416,6 +1442,24 @@
             },
             "required": false,
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug (e.g. 'press-kit-v2')"
+            },
+            "required": false,
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slug"
+            },
+            "required": false,
+            "name": "workflowSlug",
             "in": "query"
           },
           {

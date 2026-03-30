@@ -5,7 +5,7 @@ import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
 
-const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day"]);
+const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug"]);
 
 const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> = {
   country: {
@@ -19,6 +19,22 @@ const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> =
   day: {
     select: "DATE(mkv.viewed_at AT TIME ZONE 'UTC')",
     groupBy: "DATE(mkv.viewed_at AT TIME ZONE 'UTC')",
+  },
+  brandId: {
+    select: "mk.brand_id",
+    groupBy: "mk.brand_id",
+  },
+  campaignId: {
+    select: "mk.campaign_id",
+    groupBy: "mk.campaign_id",
+  },
+  featureSlug: {
+    select: "mk.feature_slug",
+    groupBy: "mk.feature_slug",
+  },
+  workflowSlug: {
+    select: "mk.workflow_slug",
+    groupBy: "mk.workflow_slug",
   },
 };
 
@@ -43,6 +59,14 @@ router.get("/media-kits/stats/views", async (req, res) => {
     if (q.mediaKitId) {
       conditions.push(`mkv.media_kit_id = $${idx++}`);
       params.push(q.mediaKitId);
+    }
+    if (q.featureSlug) {
+      conditions.push(`mk.feature_slug = $${idx++}`);
+      params.push(q.featureSlug);
+    }
+    if (q.workflowSlug) {
+      conditions.push(`mk.workflow_slug = $${idx++}`);
+      params.push(q.workflowSlug);
     }
     if (q.from) {
       conditions.push(`mkv.viewed_at >= $${idx++}`);
@@ -131,11 +155,41 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       conditions.push(`mk.campaign_id = $${idx++}`);
       params.push(q.campaignId);
     }
+    if (q.featureSlug) {
+      conditions.push(`mk.feature_slug = $${idx++}`);
+      params.push(q.featureSlug);
+    }
+    if (q.workflowSlug) {
+      conditions.push(`mk.workflow_slug = $${idx++}`);
+      params.push(q.workflowSlug);
+    }
 
     const where = conditions.join(" AND ");
 
+    const COST_GROUP_BY_COLUMN: Record<string, string> = {
+      mediaKitId: "media_kit_id",
+      brandId: "brand_id",
+      campaignId: "campaign_id",
+      featureSlug: "feature_slug",
+      workflowSlug: "workflow_slug",
+    };
+
+    const costGroupBy = q.groupBy as string | undefined;
+    const groupByColumn = costGroupBy ? COST_GROUP_BY_COLUMN[costGroupBy] : undefined;
+
+    // When grouping, we need the group column from the right table
+    const groupBySelectExpr = groupByColumn
+      ? groupByColumn === "media_kit_id"
+        ? "mkr.media_kit_id"
+        : `mk.${groupByColumn}`
+      : undefined;
+
+    const selectFields = groupBySelectExpr
+      ? `mkr.run_id, mkr.media_kit_id, ${groupBySelectExpr} AS group_key`
+      : "mkr.run_id, mkr.media_kit_id";
+
     const rows = await pgSql.unsafe(
-      `SELECT mkr.run_id, mkr.media_kit_id
+      `SELECT ${selectFields}
        FROM media_kit_runs mkr
        JOIN media_kits mk ON mk.id = mkr.media_kit_id
        WHERE ${where}`,
@@ -144,7 +198,7 @@ router.get("/media-kits/stats/costs", async (req, res) => {
 
     if (rows.length === 0) {
       res.json({
-        groups: q.groupBy === "mediaKitId"
+        groups: groupByColumn
           ? []
           : [{
               dimensions: {},
@@ -161,25 +215,25 @@ router.get("/media-kits/stats/costs", async (req, res) => {
     const costs = await batchGetCosts(runIds, ctx);
     const costMap = new Map(costs.map((c) => [c.runId, c]));
 
-    if (q.groupBy === "mediaKitId") {
+    if (costGroupBy && groupByColumn) {
       const grouped = new Map<string, { total: number; actual: number; provisioned: number; count: number }>();
 
       for (const row of rows) {
-        const mkId = String(row.media_kit_id);
+        const key = row.group_key != null ? String(row.group_key) : "__null__";
         const cost = costMap.get(String(row.run_id));
-        const entry = grouped.get(mkId) ?? { total: 0, actual: 0, provisioned: 0, count: 0 };
+        const entry = grouped.get(key) ?? { total: 0, actual: 0, provisioned: 0, count: 0 };
         entry.count++;
         if (cost) {
           entry.total += parseFloat(cost.totalCostInUsdCents);
           entry.actual += parseFloat(cost.actualCostInUsdCents);
           entry.provisioned += parseFloat(cost.provisionedCostInUsdCents);
         }
-        grouped.set(mkId, entry);
+        grouped.set(key, entry);
       }
 
       res.json({
-        groups: Array.from(grouped.entries()).map(([mkId, v]) => ({
-          dimensions: { mediaKitId: mkId },
+        groups: Array.from(grouped.entries()).map(([key, v]) => ({
+          dimensions: { [costGroupBy]: key === "__null__" ? null : key },
           totalCostInUsdCents: v.total,
           actualCostInUsdCents: v.actual,
           provisionedCostInUsdCents: v.provisioned,

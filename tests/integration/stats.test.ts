@@ -205,5 +205,118 @@ describe("Stats", () => {
       expect(res.status).toBe(200);
       expect(res.body.totalViews).toBe(1);
     });
+
+    it("filters by featureSlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v2" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v1" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "US" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?featureSlug=press-kit-v2")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.totalViews).toBe(1);
+    });
+
+    it("filters by workflowSlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "gen-press-kit" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "gen-other" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "FR" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?workflowSlug=gen-press-kit")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.totalViews).toBe(1);
+    });
+
+    it("returns grouped stats by brandId", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-a" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-b" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "FR" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?groupBy=brandId")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const ga = res.body.groups.find((g: { key: string }) => g.key === "brand-a");
+      const gb = res.body.groups.find((g: { key: string }) => g.key === "brand-b");
+      expect(ga.totalViews).toBe(1);
+      expect(gb.totalViews).toBe(2);
+    });
+
+    it("returns grouped stats by campaignId", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", campaignId: "camp-a" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", campaignId: "camp-b" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "US" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?groupBy=campaignId")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const ga = res.body.groups.find((g: { key: string }) => g.key === "camp-a");
+      const gb = res.body.groups.find((g: { key: string }) => g.key === "camp-b");
+      expect(ga.totalViews).toBe(1);
+      expect(gb.totalViews).toBe(1);
+    });
+
+    it("returns grouped stats by featureSlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v1" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v2" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "US" });
+      await insertTestView({ mediaKitId: kit2.id, country: "FR" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?groupBy=featureSlug")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const g1 = res.body.groups.find((g: { key: string }) => g.key === "press-kit-v1");
+      const g2 = res.body.groups.find((g: { key: string }) => g.key === "press-kit-v2");
+      expect(g1.totalViews).toBe(1);
+      expect(g2.totalViews).toBe(2);
+    });
+
+    it("returns grouped stats by workflowSlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "wf-a" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "wf-b" });
+
+      await insertTestView({ mediaKitId: kit1.id, country: "US" });
+      await insertTestView({ mediaKitId: kit1.id, country: "FR" });
+      await insertTestView({ mediaKitId: kit2.id, country: "DE" });
+
+      const res = await request(app)
+        .get("/media-kits/stats/views?groupBy=workflowSlug")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const ga = res.body.groups.find((g: { key: string }) => g.key === "wf-a");
+      const gb = res.body.groups.find((g: { key: string }) => g.key === "wf-b");
+      expect(ga.totalViews).toBe(2);
+      expect(gb.totalViews).toBe(1);
+    });
   });
 });
