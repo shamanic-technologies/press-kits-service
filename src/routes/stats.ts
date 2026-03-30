@@ -5,7 +5,7 @@ import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
 
-const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug"]);
+const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]);
 
 const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> = {
   country: {
@@ -35,6 +35,14 @@ const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> =
   workflowSlug: {
     select: "mk.workflow_slug",
     groupBy: "mk.workflow_slug",
+  },
+  featureDynastySlug: {
+    select: "mk.feature_dynasty_slug",
+    groupBy: "mk.feature_dynasty_slug",
+  },
+  workflowDynastySlug: {
+    select: "mk.workflow_dynasty_slug",
+    groupBy: "mk.workflow_dynasty_slug",
   },
 };
 
@@ -67,6 +75,14 @@ router.get("/media-kits/stats/views", async (req, res) => {
     if (q.workflowSlug) {
       conditions.push(`mk.workflow_slug = $${idx++}`);
       params.push(q.workflowSlug);
+    }
+    if (q.featureDynastySlug) {
+      conditions.push(`mk.feature_dynasty_slug = $${idx++}`);
+      params.push(q.featureDynastySlug);
+    }
+    if (q.workflowDynastySlug) {
+      conditions.push(`mk.workflow_dynasty_slug = $${idx++}`);
+      params.push(q.workflowDynastySlug);
     }
     if (q.from) {
       conditions.push(`mkv.viewed_at >= $${idx++}`);
@@ -163,6 +179,14 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       conditions.push(`mk.workflow_slug = $${idx++}`);
       params.push(q.workflowSlug);
     }
+    if (q.featureDynastySlug) {
+      conditions.push(`mk.feature_dynasty_slug = $${idx++}`);
+      params.push(q.featureDynastySlug);
+    }
+    if (q.workflowDynastySlug) {
+      conditions.push(`mk.workflow_dynasty_slug = $${idx++}`);
+      params.push(q.workflowDynastySlug);
+    }
 
     const where = conditions.join(" AND ");
 
@@ -172,6 +196,8 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       campaignId: "campaign_id",
       featureSlug: "feature_slug",
       workflowSlug: "workflow_slug",
+      featureDynastySlug: "feature_dynasty_slug",
+      workflowDynastySlug: "workflow_dynasty_slug",
     };
 
     const costGroupBy = q.groupBy as string | undefined;

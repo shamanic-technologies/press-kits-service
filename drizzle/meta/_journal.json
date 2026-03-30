@@ -78,6 +78,13 @@
       "when": 1775332800000,
       "tag": "0010_add_media_kit_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1775419200000,
+      "tag": "0011_add_dynasty_slugs",
+      "breakpoints": true
     }
   ]
 }

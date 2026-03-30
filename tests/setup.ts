@@ -51,4 +51,7 @@ beforeAll(async () => {
   )`;
   await sql`CREATE INDEX IF NOT EXISTS idx_runs_media_kit_id ON media_kit_runs USING btree (media_kit_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_runs_run_id ON media_kit_runs USING btree (run_id)`;
+  // Dynasty slug columns
+  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS feature_dynasty_slug varchar`;
+  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS workflow_dynasty_slug varchar`;
 });
