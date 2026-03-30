@@ -2,7 +2,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import { complete } from "./chat-client.js";
-import { getBrand, extractBrandFields } from "./brand-client.js";
+import { getBrand, extractBrandFields, extractBrandImages } from "./brand-client.js";
 import type { ContextHeaders } from "../middleware/auth.js";
 
 const SYSTEM_PROMPT = [
@@ -11,6 +11,7 @@ const SYSTEM_PROMPT = [
   "Use markdown headings (##), bold text, and bullet points for readability.",
   "Do NOT include import statements or JSX components — only standard markdown syntax.",
   "Use the brand data provided below to fill in ALL details. NEVER use placeholder brackets like [Brand Name] or [Year] — if a piece of information is not available, omit that line entirely rather than using a placeholder.",
+  "When brand images are provided, embed them in relevant sections using standard markdown image syntax: ![description](url). Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text.",
   "Output ONLY the MDX content, no explanations or wrapping.",
 ].join("\n");
 
@@ -33,6 +34,15 @@ const PRESS_KIT_FIELDS = [
   { key: "press_contact", description: "Press or media contact information (name, email, phone)" },
   { key: "notable_clients_or_partners", description: "Notable clients, partners, or case studies" },
   { key: "funding_info", description: "Funding rounds, investors, or financial backing information" },
+];
+
+/** Image categories to extract from brand-service for press kit visuals. */
+const PRESS_KIT_IMAGE_CATEGORIES = [
+  { key: "logo", description: "Company logo (primary, high resolution)", maxCount: 2 },
+  { key: "product", description: "Product screenshots, UI mockups, or product photos", maxCount: 5 },
+  { key: "team", description: "Team photos, headshots of leadership or founders", maxCount: 3 },
+  { key: "office", description: "Office, workspace, or company environment photos", maxCount: 2 },
+  { key: "brand", description: "Brand imagery, lifestyle photos, or marketing visuals", maxCount: 3 },
 ];
 
 interface GenerationData {
@@ -106,13 +116,14 @@ function formatFieldValue(value: string | string[] | Record<string, unknown> | n
 async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise<string | null> {
   console.log(`[press-kits-service] Fetching brand data for brandId=${brandId}`);
 
-  // Fetch basic brand info and extracted fields in parallel
-  const [brand, extractedFields] = await Promise.all([
+  // Fetch basic brand info, extracted fields, and images in parallel
+  const [brand, extractedFields, imageResults] = await Promise.all([
     getBrand(brandId, ctx),
     extractBrandFields(brandId, PRESS_KIT_FIELDS, ctx),
+    extractBrandImages(brandId, PRESS_KIT_IMAGE_CATEGORIES, ctx),
   ]);
 
-  if (!brand && extractedFields.length === 0) {
+  if (!brand && extractedFields.length === 0 && imageResults.length === 0) {
     console.warn(`[press-kits-service] No brand data found for brandId=${brandId}`);
     return null;
   }
@@ -146,9 +157,27 @@ async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise
     parts.push("");
   }
 
+  // Brand images with permanent URLs
+  const totalImages = imageResults.reduce((sum, r) => sum + r.images.length, 0);
+  if (totalImages > 0) {
+    parts.push("--- BRAND IMAGES (use these permanent URLs in the press kit) ---");
+    for (const result of imageResults) {
+      if (result.images.length === 0) continue;
+      parts.push(`\nCategory: ${result.category}`);
+      for (const img of result.images) {
+        parts.push(`- ![${img.description}](${img.permanentUrl})`);
+        if (img.width && img.height) {
+          parts.push(`  Dimensions: ${img.width}x${img.height}, Format: ${img.format}`);
+        }
+      }
+    }
+    parts.push("--- END BRAND IMAGES ---");
+    parts.push("");
+  }
+
   parts.push("--- END BRAND DATA ---");
 
-  console.log(`[press-kits-service] Brand data fetched: ${brand ? "basic info ✓" : "basic info ✗"}, ${extractedFields.filter((f) => f.value !== null).length}/${extractedFields.length} fields extracted`);
+  console.log(`[press-kits-service] Brand data fetched: ${brand ? "basic info ✓" : "basic info ✗"}, ${extractedFields.filter((f) => f.value !== null).length}/${extractedFields.length} fields extracted, ${totalImages} images`);
 
   return parts.join("\n");
 }

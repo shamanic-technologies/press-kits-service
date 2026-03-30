@@ -18,9 +18,11 @@ vi.mock("../../src/lib/chat-client.js", () => ({
 // Mock the brand client
 const mockGetBrand = vi.fn();
 const mockExtractBrandFields = vi.fn();
+const mockExtractBrandImages = vi.fn();
 vi.mock("../../src/lib/brand-client.js", () => ({
   getBrand: (...args: unknown[]) => mockGetBrand(...args),
   extractBrandFields: (...args: unknown[]) => mockExtractBrandFields(...args),
+  extractBrandImages: (...args: unknown[]) => mockExtractBrandImages(...args),
 }));
 
 const { generatePressKit } = await import("../../src/lib/generate.js");
@@ -31,6 +33,8 @@ describe("generatePressKit", () => {
     mockComplete.mockReset();
     mockGetBrand.mockReset();
     mockExtractBrandFields.mockReset();
+    mockExtractBrandImages.mockReset();
+    mockExtractBrandImages.mockResolvedValue([]);
   });
 
   afterAll(async () => {
@@ -307,5 +311,164 @@ describe("generatePressKit", () => {
     // Brand data section should not be in the prompt
     const callArgs = mockComplete.mock.calls[0][0];
     expect(callArgs.message).not.toContain("BRAND DATA");
+  });
+
+  it("fetches brand images and includes permanent URLs in prompt", async () => {
+    const brandId = "c2222222-2222-2222-2222-222222222222";
+    const kit = await insertTestMediaKit({
+      orgId: "org-images",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit with images",
+      instructionType: "initial",
+    });
+
+    mockGetBrand.mockResolvedValue({
+      id: brandId,
+      name: "ImageCo",
+      domain: "imageco.com",
+      brandUrl: "https://imageco.com",
+      elevatorPitch: null,
+      bio: null,
+      mission: null,
+      location: null,
+      categories: null,
+      logoUrl: null,
+    });
+
+    mockExtractBrandFields.mockResolvedValue([
+      { key: "company_name", value: "ImageCo", cached: false },
+    ]);
+
+    mockExtractBrandImages.mockResolvedValue([
+      {
+        category: "logo",
+        images: [
+          {
+            originalUrl: "https://imageco.com/logo.png",
+            permanentUrl: "https://r2.distribute.you/brands/imageco/logo.png",
+            description: "ImageCo primary logo",
+            width: 512,
+            height: 512,
+            format: "png",
+            sizeBytes: 24000,
+            relevanceScore: 0.98,
+            cached: false,
+          },
+        ],
+      },
+      {
+        category: "product",
+        images: [
+          {
+            originalUrl: "https://imageco.com/product-shot.jpg",
+            permanentUrl: "https://r2.distribute.you/brands/imageco/product-shot.jpg",
+            description: "ImageCo dashboard screenshot",
+            width: 1920,
+            height: 1080,
+            format: "jpeg",
+            sizeBytes: 150000,
+            relevanceScore: 0.92,
+            cached: false,
+          },
+        ],
+      },
+      {
+        category: "team",
+        images: [],
+      },
+    ]);
+
+    mockComplete.mockResolvedValue({
+      content: "# ImageCo Press Kit\n\n![ImageCo primary logo](https://r2.distribute.you/brands/imageco/logo.png)\n\n## Overview\n\nImageCo builds great products.",
+      tokensInput: 600,
+      tokensOutput: 400,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    // Verify extract-images was called with the right categories
+    expect(mockExtractBrandImages).toHaveBeenCalledWith(
+      brandId,
+      expect.arrayContaining([
+        expect.objectContaining({ key: "logo", maxCount: 2 }),
+        expect.objectContaining({ key: "product", maxCount: 5 }),
+        expect.objectContaining({ key: "team", maxCount: 3 }),
+      ]),
+      undefined,
+    );
+
+    // Verify prompt includes image URLs
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).toContain("BRAND IMAGES");
+    expect(callArgs.message).toContain("https://r2.distribute.you/brands/imageco/logo.png");
+    expect(callArgs.message).toContain("ImageCo primary logo");
+    expect(callArgs.message).toContain("https://r2.distribute.you/brands/imageco/product-shot.jpg");
+    expect(callArgs.message).toContain("ImageCo dashboard screenshot");
+    expect(callArgs.message).toContain("512x512");
+    // Empty category (team) should not appear
+    expect(callArgs.message).not.toContain("Category: team");
+
+    // Verify system prompt mentions image usage
+    expect(callArgs.systemPrompt).toContain("brand images are provided");
+
+    // Verify kit was updated
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
+  });
+
+  it("generates without images when extract-images returns empty", async () => {
+    const brandId = "d3333333-3333-3333-3333-333333333333";
+    const kit = await insertTestMediaKit({
+      orgId: "org-no-images",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit",
+      instructionType: "initial",
+    });
+
+    mockGetBrand.mockResolvedValue({
+      id: brandId,
+      name: "NoImgCo",
+      domain: "noimgco.com",
+      brandUrl: "https://noimgco.com",
+      elevatorPitch: null,
+      bio: null,
+      mission: null,
+      location: null,
+      categories: null,
+      logoUrl: null,
+    });
+
+    mockExtractBrandFields.mockResolvedValue([]);
+    mockExtractBrandImages.mockResolvedValue([]);
+
+    mockComplete.mockResolvedValue({
+      content: "# NoImgCo Press Kit\n\n## Overview\n\nContent here.",
+      tokensInput: 50,
+      tokensOutput: 100,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).not.toContain("BRAND IMAGES");
+
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
   });
 });
