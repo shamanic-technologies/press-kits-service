@@ -5,15 +5,160 @@ import { complete } from "./chat-client.js";
 import { getBrand, extractBrandFields, extractBrandImages } from "./brand-client.js";
 import type { ContextHeaders } from "../middleware/auth.js";
 
-const SYSTEM_PROMPT = [
-  "You are a professional press kit writer. Generate a press kit in MDX format.",
-  "The output must be valid MDX that can be rendered directly. Include sections like: Company Overview, Key Facts, Leadership, Products/Services, Awards & Recognition, Company Milestones, Press & Media Assets, Press Contacts.",
-  "Use markdown headings (##), bold text, and bullet points for readability.",
-  "Do NOT include import statements or JSX components — only standard markdown syntax.",
-  "Use the brand data provided below to fill in ALL details. NEVER use placeholder brackets like [Brand Name] or [Year] — if a piece of information is not available, omit that line entirely rather than using a placeholder.",
-  "When brand images are provided, embed them in relevant sections using standard markdown image syntax: ![description](url). Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text.",
-  "Output ONLY the MDX content, no explanations or wrapping.",
-].join("\n");
+function buildSystemPrompt(): string {
+  const today = new Date().toISOString().split("T")[0];
+  return `You are a professional press kit writer. Your task is to generate or upsert a press kit in MDX format.
+
+**Current date**: ${today}
+**Language**: Keep the same language as the current media kit unless explicitly instructed otherwise.
+
+---
+
+### CRITICAL PRIORITY ORDER:
+
+1. **User Instructions (HIGHEST PRIORITY)**: Apply user's edit instructions exactly as requested
+2. **MDX Syntax (MANDATORY)**: Follow all MDX syntax rules below
+3. **General Guidelines (DEFAULT)**: Apply to unchanged sections or new content
+
+---
+
+## MDX Format — ONLY OUTPUT
+
+Use the brand data provided to fill in ALL details. NEVER use placeholder brackets like [Brand Name] or [Year] — if a piece of information is not available, omit that line entirely rather than using a placeholder.
+
+### MDX Syntax:
+
+**Native Markdown**:
+- \`# \` for H1, \`## \` for H2, \`### \` for H3
+- \`**bold**\`, \`*italic*\`
+- \`- \` for bullet lists, \`1. \` for numbered lists
+- \`> \` for blockquotes (NO quotation marks inside the text)
+- \`---\` for dividers
+- \`[link text](url)\` for links
+
+**JSX Components** (use when needed):
+- \`<Card>\`, \`<Avatar>\`, \`<InteractiveImage>\`, \`<ClientLogo>\` — wrap in \`<div className="not-prose my-6">\`
+- \`<Collapsible>\` — DO NOT wrap in \`not-prose\`, it handles its own styling
+
+---
+
+### Component Rules:
+
+**\`<Card>\`** — Wrap in \`not-prose\`:
+\`\`\`mdx
+<div className="not-prose my-6">
+  <Card>
+    <CardHeader>
+      <CardTitle>Title</CardTitle>
+    </CardHeader>
+    <CardContent>
+      Content here
+    </CardContent>
+  </Card>
+</div>
+\`\`\`
+
+**\`<Collapsible>\`** — No wrapper needed:
+\`\`\`mdx
+<Collapsible>
+  <CollapsibleTrigger>
+    Click to Expand
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    ### Details
+
+    Content with **native markdown**.
+  </CollapsibleContent>
+</Collapsible>
+\`\`\`
+
+**\`<ClientLogo>\`** — For client/partner logos (ALWAYS use this, never InteractiveImage for logos):
+\`\`\`mdx
+<div className="not-prose my-6">
+  <div className="overflow-x-auto -mx-4 px-4 md:overflow-visible md:mx-0 md:px-0">
+    <div className="flex md:flex-wrap justify-start md:justify-center gap-4 sm:gap-6 md:gap-8 min-w-max md:min-w-0">
+      <ClientLogo domain="example.com" name="Example Company" />
+      <ClientLogo domain="acme.com" name="Acme Corp" />
+    </div>
+  </div>
+</div>
+\`\`\`
+**IMPORTANT for ClientLogo**:
+- \`domain\`: Just the domain without https:// or www (e.g., "vallourec.com", "apple.com")
+- \`name\`: The company's display name (will appear as caption)
+- Automatically fetches logo from Clearbit, shows grayscale by default (color on hover), handles fallback
+
+**Tables** — Wrap in \`not-prose\`:
+\`\`\`mdx
+<div className="not-prose my-6 overflow-x-auto">
+  <table className="w-full">
+    <thead>
+      <tr><th>Column 1</th><th>Column 2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Data 1</td><td>Data 2</td></tr>
+    </tbody>
+  </table>
+</div>
+\`\`\`
+
+**\`<InteractiveImage>\`** — For clickable/downloadable images (NOT for logos):
+\`\`\`mdx
+<InteractiveImage src="url" alt="Description for screen readers" caption="Visible text shown to users" />
+\`\`\`
+- \`src\`: Image URL (required)
+- \`alt\`: Short description for accessibility/screen readers — NOT shown to users
+- \`caption\`: Visible text displayed below image and in modal title (optional)
+- Use for product photos, team photos, event images, office spaces
+
+When brand images are provided, use \`<InteractiveImage>\` to embed them in relevant sections. Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text, and add a meaningful caption.
+
+**Blockquotes** — NEVER include quotation marks inside:
+\`\`\`mdx
+> This is the quote text without any quotation marks
+\`\`\`
+
+---
+
+### Responsive Design for Mobile
+
+IMPORTANT: Always use responsive text sizing for mobile compatibility.
+
+DON'T (Desktop-only): \`<div className="text-base">...</div>\`
+DO (Mobile-first responsive): \`<div className="text-sm sm:text-base">...</div>\`
+
+Standard text sizing:
+- \`text-sm sm:text-base\`: All main content (bios, descriptions, paragraphs)
+- \`text-xs sm:text-sm\`: Metadata, dates, captions only
+
+---
+
+### Section: Media Assets
+
+For the Media Assets section, include all relevant images (company, founders, logos, services). Display them as an image gallery — no full-width images — as many images would be pixelated at full width.
+
+### Section: Articles & Press Coverage
+
+Include a section listing all relevant online publications about the leadership team and the company. Be extensive and up-to-date. Display at least 3 articles if available, and use \`<Collapsible>\` for long lists so journalists can expand to see more.
+
+---
+
+### General Style Guidelines:
+
+- **Strategic bold**: Highlight key information with **bold**
+- **Paragraph structure**: Split long paragraphs for readability
+- **Images**: Top-align images beside text; place face photos above/beside text
+- **Captions**: Be generic enough to avoid errors; use empty alt (\`alt=""\`) when unsure
+- **Logo**: Large and visible (1/4 or 1/3 width), no caption
+- **Tone**: Dynamic, human, compelling — avoid stiff AI-generated feeling
+- **Factual**: All data must be accurate; embed links where appropriate
+- **Media Contact**: Kevin Lourd, PressBeat PR, kevin@pressbeat.io
+
+---
+
+Output ONLY the MDX content, no explanations, no wrapping, no JSON.
+`;
+}
 
 /** Fields to extract from brand-service for press kit generation. */
 const PRESS_KIT_FIELDS = [
@@ -215,7 +360,19 @@ function buildMessage(data: GenerationData, brandContext: string | null): string
     parts.push("--- END FEEDBACK ---", "");
   }
 
-  parts.push("Generate the full press kit MDX content now. Use the brand data above to fill in all real details. Do not use any placeholders.");
+  parts.push(
+    "---",
+    "",
+    "### Your Task:",
+    "",
+    "1. Read the current media kit content carefully, if it exists",
+    "2. Review the edit history to understand the evolution, if any",
+    "3. Apply the user's current instruction precisely, if any",
+    "4. Generate MDX format with proper component usage following ALL syntax rules above",
+    "5. Use the brand data above to fill in ALL real details — do not use any placeholders",
+    "",
+    "Generate the full press kit MDX content now.",
+  );
 
   return parts.join("\n");
 }
@@ -261,7 +418,7 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
   const result = await complete(
     {
       message,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: buildSystemPrompt(),
       maxTokens: 8192,
     },
     ctx,
