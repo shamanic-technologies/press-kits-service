@@ -265,6 +265,8 @@ router.post("/media-kits", async (req, res) => {
           brandId: ctx.brandId ?? null,
           campaignId: ctx.campaignId ?? null,
           featureSlug: ctx.featureSlug ?? null,
+          featureDynastySlug: ctx.featureDynastySlug ?? null,
+          workflowDynastySlug: ctx.workflowDynastySlug ?? null,
         })
         .returning();
       generatingKit = newKit;
@@ -289,6 +291,8 @@ router.post("/media-kits", async (req, res) => {
           brandId: ctx.brandId ?? currentKit.brandId,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
+          featureDynastySlug: ctx.featureDynastySlug ?? currentKit.featureDynastySlug,
+          workflowDynastySlug: ctx.workflowDynastySlug ?? currentKit.workflowDynastySlug,
         })
         .returning();
       generatingKit = newKit;
@@ -308,6 +312,8 @@ router.post("/media-kits", async (req, res) => {
           brandId: ctx.brandId ?? currentKit.brandId,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
+          featureDynastySlug: ctx.featureDynastySlug ?? currentKit.featureDynastySlug,
+          workflowDynastySlug: ctx.workflowDynastySlug ?? currentKit.workflowDynastySlug,
         })
         .where(eq(mediaKits.id, currentKit.id))
         .returning();

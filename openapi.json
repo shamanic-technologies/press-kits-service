@@ -73,6 +73,16 @@
             "nullable": true,
             "example": "generate-press-kit"
           },
+          "featureDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "example": "press-kit-page-generation"
+          },
+          "workflowDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "example": "generate-press-kit"
+          },
           "shareToken": {
             "type": "string",
             "nullable": true,
@@ -134,6 +144,8 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
+          "featureDynastySlug",
+          "workflowDynastySlug",
           "shareToken",
           "title",
           "iconUrl",
@@ -204,6 +216,16 @@
             "nullable": true,
             "example": "generate-press-kit"
           },
+          "featureDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "example": "press-kit-page-generation"
+          },
+          "workflowDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "example": "generate-press-kit"
+          },
           "shareToken": {
             "type": "string",
             "nullable": true,
@@ -265,6 +287,8 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
+          "featureDynastySlug",
+          "workflowDynastySlug",
           "shareToken",
           "title",
           "iconUrl",
@@ -410,7 +434,9 @@
           "brandId",
           "campaignId",
           "featureSlug",
-          "workflowSlug"
+          "workflowSlug",
+          "featureDynastySlug",
+          "workflowDynastySlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
       },
@@ -471,7 +497,9 @@
           "brandId",
           "campaignId",
           "featureSlug",
-          "workflowSlug"
+          "workflowSlug",
+          "featureDynastySlug",
+          "workflowDynastySlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
       },
@@ -814,6 +842,24 @@
             },
             "required": false,
             "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stable feature dynasty slug (version-independent)"
+            },
+            "required": false,
+            "name": "x-feature-dynasty-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stable workflow dynasty slug (version-independent)"
+            },
+            "required": false,
+            "name": "x-workflow-dynasty-slug",
             "in": "header"
           }
         ],
@@ -1327,6 +1373,24 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by feature dynasty slug (stable across versions)"
+            },
+            "required": false,
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (stable across versions)"
+            },
+            "required": false,
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "date-time",
               "description": "Start of date range (ISO 8601)",
               "example": "2026-03-01T00:00:00Z"
@@ -1460,6 +1524,24 @@
             },
             "required": false,
             "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (stable across versions)"
+            },
+            "required": false,
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (stable across versions)"
+            },
+            "required": false,
+            "name": "workflowDynastySlug",
             "in": "query"
           },
           {

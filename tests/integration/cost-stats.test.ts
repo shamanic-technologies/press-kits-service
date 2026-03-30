@@ -341,6 +341,96 @@ describe("Cost Stats", () => {
       expect(g2.totalCostInUsdCents).toBe(200);
     });
 
+    it("filters by featureDynastySlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "dynasty-feat" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "other-dynasty" });
+
+      await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-fd1", runType: "generation" });
+      await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-fd2", runType: "generation" });
+
+      mockBatchGetCosts.mockResolvedValue([
+        { runId: "run-fd1", totalCostInUsdCents: "250", actualCostInUsdCents: "250", provisionedCostInUsdCents: "0" },
+      ]);
+
+      const res = await request(app)
+        .get("/media-kits/stats/costs?featureDynastySlug=dynasty-feat")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups[0].runCount).toBe(1);
+      expect(mockBatchGetCosts).toHaveBeenCalledWith(["run-fd1"], expect.anything());
+    });
+
+    it("filters by workflowDynastySlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wf-dynasty" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wf-other" });
+
+      await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-wd1", runType: "generation" });
+      await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-wd2", runType: "generation" });
+
+      mockBatchGetCosts.mockResolvedValue([
+        { runId: "run-wd1", totalCostInUsdCents: "350", actualCostInUsdCents: "350", provisionedCostInUsdCents: "0" },
+      ]);
+
+      const res = await request(app)
+        .get("/media-kits/stats/costs?workflowDynastySlug=wf-dynasty")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups[0].runCount).toBe(1);
+      expect(mockBatchGetCosts).toHaveBeenCalledWith(["run-wd1"], expect.anything());
+    });
+
+    it("groups costs by featureDynastySlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "fd-a" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "fd-b" });
+
+      await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-fda", runType: "generation" });
+      await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-fdb", runType: "generation" });
+
+      mockBatchGetCosts.mockResolvedValue([
+        { runId: "run-fda", totalCostInUsdCents: "400", actualCostInUsdCents: "400", provisionedCostInUsdCents: "0" },
+        { runId: "run-fdb", totalCostInUsdCents: "600", actualCostInUsdCents: "600", provisionedCostInUsdCents: "0" },
+      ]);
+
+      const res = await request(app)
+        .get("/media-kits/stats/costs?groupBy=featureDynastySlug")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const ga = res.body.groups.find((g: { dimensions: { featureDynastySlug: string } }) => g.dimensions.featureDynastySlug === "fd-a");
+      const gb = res.body.groups.find((g: { dimensions: { featureDynastySlug: string } }) => g.dimensions.featureDynastySlug === "fd-b");
+      expect(ga.totalCostInUsdCents).toBe(400);
+      expect(gb.totalCostInUsdCents).toBe(600);
+    });
+
+    it("groups costs by workflowDynastySlug", async () => {
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wd-1" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wd-2" });
+
+      await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-wd1g", runType: "generation" });
+      await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-wd2g", runType: "generation" });
+
+      mockBatchGetCosts.mockResolvedValue([
+        { runId: "run-wd1g", totalCostInUsdCents: "500", actualCostInUsdCents: "500", provisionedCostInUsdCents: "0" },
+        { runId: "run-wd2g", totalCostInUsdCents: "300", actualCostInUsdCents: "300", provisionedCostInUsdCents: "0" },
+      ]);
+
+      const res = await request(app)
+        .get("/media-kits/stats/costs?groupBy=workflowDynastySlug")
+        .set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(2);
+
+      const g1 = res.body.groups.find((g: { dimensions: { workflowDynastySlug: string } }) => g.dimensions.workflowDynastySlug === "wd-1");
+      const g2 = res.body.groups.find((g: { dimensions: { workflowDynastySlug: string } }) => g.dimensions.workflowDynastySlug === "wd-2");
+      expect(g1.totalCostInUsdCents).toBe(500);
+      expect(g2.totalCostInUsdCents).toBe(300);
+    });
+
     it("returns empty groups when groupBy=brandId and no runs", async () => {
       const res = await request(app)
         .get("/media-kits/stats/costs?groupBy=brandId")
