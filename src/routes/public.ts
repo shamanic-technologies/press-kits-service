@@ -4,6 +4,7 @@ import geoip from "geoip-lite";
 import { marked } from "marked";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitViews } from "../db/schema.js";
+import { getPlatformKey } from "../lib/key-client.js";
 
 const router = Router();
 
@@ -22,6 +23,7 @@ interface RenderOptions {
   mdxContent: string;
   iconUrl: string | null;
   brandDomain: string | null;
+  logoDevToken: string | null;
 }
 
 function extractAttr(tag: string, attr: string): string | null {
@@ -35,7 +37,7 @@ function extractAttr(tag: string, attr: string): string | null {
  * This runs on the raw MDX string BEFORE marked.parse() so that marked
  * doesn't mangle the JSX tags.
  */
-function transformJsxComponents(mdx: string): string {
+function transformJsxComponents(mdx: string, logoDevToken: string | null = null): string {
   let html = mdx;
 
   // className → class (everywhere)
@@ -69,6 +71,9 @@ function transformJsxComponents(mdx: string): string {
   );
 
   // <ClientLogo domain="..." name="..." />
+  const logoDevQuery = logoDevToken
+    ? `?token=${encodeURIComponent(logoDevToken)}&format=png&size=80`
+    : "?format=png&size=80";
   html = html.replace(
     /<ClientLogo\s+([^>]*?)\/>/gs,
     (_match, attrs: string) => {
@@ -76,7 +81,7 @@ function transformJsxComponents(mdx: string): string {
       const name = extractAttr(attrs, "name") ?? domain;
       const safeName = escapeHtml(name);
       const initial = escapeHtml(name.charAt(0));
-      return `<div class="client-logo"><img src="https://img.logo.dev/${encodeURIComponent(domain)}?format=png&size=80" alt="${safeName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="client-logo-fallback" style="display:none">${initial}</span><span class="client-logo-name">${safeName}</span></div>`;
+      return `<div class="client-logo"><img src="https://img.logo.dev/${encodeURIComponent(domain)}${logoDevQuery}" alt="${safeName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="client-logo-fallback" style="display:none">${initial}</span><span class="client-logo-name">${safeName}</span></div>`;
     },
   );
 
@@ -173,8 +178,8 @@ function parseCollapsibleContent(html: string): string {
   );
 }
 
-function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptions): string {
-  const preprocessed = transformJsxComponents(mdxContent);
+function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain, logoDevToken }: RenderOptions): string {
+  const preprocessed = transformJsxComponents(mdxContent, logoDevToken);
   const rawHtml = marked.parse(preprocessed) as string;
   const withCollapsibles = parseCollapsibleContent(rawHtml);
   const htmlContent = wrapSectionsInCards(withCollapsibles);
@@ -183,10 +188,13 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     ? `<link rel="icon" href="${escapeHtml(iconUrl)}" />`
     : "";
 
+  const headerLogoQuery = logoDevToken
+    ? `?token=${encodeURIComponent(logoDevToken)}&format=png`
+    : "?format=png";
   const logoTag = iconUrl
     ? `<img src="${escapeHtml(iconUrl)}" alt="${safeTitle}" class="brand-logo" />`
     : brandDomain
-      ? `<img src="https://img.logo.dev/${escapeHtml(brandDomain)}?format=png" alt="${safeTitle}" class="brand-logo" onerror="this.style.display='none'" />`
+      ? `<img src="https://img.logo.dev/${escapeHtml(brandDomain)}${headerLogoQuery}" alt="${safeTitle}" class="brand-logo" onerror="this.style.display='none'" />`
       : "";
 
   return `<!DOCTYPE html>
@@ -636,6 +644,12 @@ router.get("/public/:token", async (req, res) => {
       })
       .catch((err) => console.error("[press-kits-service] Failed to track view:", err));
 
+    // Fetch logo.dev API token (cached, fire-and-forget on failure)
+    const logoDevToken = await getPlatformKey("logo-dev").catch((err) => {
+      console.error("[press-kits-service] Failed to fetch logo-dev key:", err);
+      return null;
+    });
+
     // Serve rendered HTML
     const title = kit.title || "Press Kit";
     const content = kit.mdxPageContent || "";
@@ -644,6 +658,7 @@ router.get("/public/:token", async (req, res) => {
       mdxContent: content,
       iconUrl: kit.iconUrl,
       brandDomain: kit.brandDomain,
+      logoDevToken,
     });
     res.type("html").send(html);
   } catch (err) {
