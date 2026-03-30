@@ -41,27 +41,42 @@ function transformJsxComponents(mdx: string): string {
   // className → class (everywhere)
   html = html.replace(/\bclassName=/g, "class=");
 
+  // Strip Tailwind utility classes that have no effect without Tailwind CSS
+  // e.g. class="not-prose my-6 overflow-x-auto -mx-4 px-4 md:overflow-visible ..."
+  html = html.replace(
+    /\bclass="([^"]*)"/g,
+    (_match, classes: string) => {
+      const filtered = classes
+        .split(/\s+/)
+        .filter((c) => !isTailwindUtility(c))
+        .join(" ");
+      return filtered ? `class="${filtered}"` : "";
+    },
+  );
+
   // <InteractiveImage src="..." alt="..." caption="..." />
   html = html.replace(
-    /<InteractiveImage\s+([^>]*?)\/>/g,
+    /<InteractiveImage\s+([^>]*?)\/>/gs,
     (_match, attrs: string) => {
       const src = extractAttr(attrs, "src") ?? "";
       const alt = extractAttr(attrs, "alt") ?? "";
       const caption = extractAttr(attrs, "caption");
       const captionHtml = caption
-        ? `<figcaption class="interactive-image-caption">${caption}</figcaption>`
+        ? `<figcaption class="interactive-image-caption">${escapeHtml(caption)}</figcaption>`
         : "";
-      return `<figure class="interactive-image"><img src="${src}" alt="${alt}" loading="lazy" />${captionHtml}</figure>`;
+      return `<figure class="interactive-image"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy" onerror="this.classList.add('img-broken')" />${captionHtml}</figure>`;
     },
   );
 
   // <ClientLogo domain="..." name="..." />
   html = html.replace(
-    /<ClientLogo\s+([^>]*?)\/>/g,
+    /<ClientLogo\s+([^>]*?)\/>/gs,
     (_match, attrs: string) => {
       const domain = extractAttr(attrs, "domain") ?? "";
       const name = extractAttr(attrs, "name") ?? domain;
-      return `<div class="client-logo"><img src="https://img.logo.dev/${domain}?format=png&size=80" alt="${name}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'client-logo-fallback\\'>${name.charAt(0)}</span><span class=\\'client-logo-name\\'>${name}</span>'" /><span class="client-logo-name">${name}</span></div>`;
+      const safeName = escapeHtml(name);
+      const initial = escapeHtml(name.charAt(0));
+      return `<div class="client-logo"><img src="https://img.logo.dev/${encodeURIComponent(domain)}?format=png&size=80" alt="${safeName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="client-logo-fallback" style="display:none">${initial}</span><span class="client-logo-name">${safeName}</span></div>`;
     },
   );
 
@@ -70,8 +85,9 @@ function transformJsxComponents(mdx: string): string {
   html = html.replace(/<\/Collapsible>/g, "</details>");
   html = html.replace(/<CollapsibleTrigger>/g, "<summary>");
   html = html.replace(/<\/CollapsibleTrigger>/g, "</summary>");
-  html = html.replace(/<CollapsibleContent>/g, '<div class="collapsible-content">');
-  html = html.replace(/<\/CollapsibleContent>/g, "</div>");
+  // Mark collapsible content with a placeholder so we can parse the markdown inside later
+  html = html.replace(/<CollapsibleContent>/g, "<!--COLLAPSIBLE_CONTENT_START-->");
+  html = html.replace(/<\/CollapsibleContent>/g, "<!--COLLAPSIBLE_CONTENT_END-->");
 
   // <Card> family → divs
   html = html.replace(/<Card>/g, '<div class="jsx-card">');
@@ -83,12 +99,48 @@ function transformJsxComponents(mdx: string): string {
   html = html.replace(/<CardContent>/g, '<div class="jsx-card-content">');
   html = html.replace(/<\/CardContent>/g, "</div>");
 
+  // Remove bare wrapper divs that served only to carry Tailwind classes (now stripped)
+  // Match <div> (no class or empty class) ... </div> that wrap inline content
+  html = html.replace(/<div\s*>\s*([\s\S]*?)\s*<\/div>/g, "$1");
+
   return html;
+}
+
+/** Returns true for Tailwind utility classes (no effect without Tailwind CSS). */
+function isTailwindUtility(cls: string): boolean {
+  if (!cls) return false;
+  // Known structural classes we keep
+  if (
+    cls === "interactive-image" ||
+    cls === "interactive-image-caption" ||
+    cls === "client-logo" ||
+    cls === "client-logo-name" ||
+    cls === "client-logo-fallback" ||
+    cls === "collapsible" ||
+    cls === "collapsible-content" ||
+    cls === "jsx-card" ||
+    cls === "jsx-card-header" ||
+    cls === "jsx-card-title" ||
+    cls === "jsx-card-content" ||
+    cls === "logo-grid"
+  )
+    return false;
+  // Tailwind patterns: responsive prefixes, common utilities
+  if (/^(sm:|md:|lg:|xl:|2xl:)/.test(cls)) return true;
+  if (/^-?m[xytblr]?-/.test(cls)) return true; // margin
+  if (/^p[xytblr]?-/.test(cls)) return true; // padding
+  if (/^(text-|font-|leading-|tracking-)/.test(cls)) return true;
+  if (/^(flex|grid|block|inline|hidden|overflow|gap|space|w-|h-|min-w|max-w|min-h)/.test(cls)) return true;
+  if (/^(rounded|border|shadow|bg-|ring|opacity)/.test(cls)) return true;
+  if (/^(items-|justify-|self-|place-)/.test(cls)) return true;
+  if (cls === "not-prose" || cls === "prose") return true;
+  return false;
 }
 
 /**
  * Wraps each <h2> section (h2 + all siblings until the next h2/h1) in a
  * <section class="card"> div. Content before the first h2 stays unwrapped.
+ * Sections that already contain a .jsx-card are not double-wrapped.
  */
 function wrapSectionsInCards(html: string): string {
   // Split on h2 tags while keeping them in the result
@@ -97,17 +149,35 @@ function wrapSectionsInCards(html: string): string {
 
   // First part is content before any h2 (intro text) — leave unwrapped
   const intro = parts[0];
-  const sections = parts.slice(1).map(
-    (section) => `<section class="card">${section}</section>`
-  );
+  const sections = parts.slice(1).map((section) => {
+    // Don't double-wrap sections that already contain a jsx-card
+    if (section.includes('class="jsx-card"')) return section;
+    return `<section class="card">${section}</section>`;
+  });
 
   return intro + sections.join("");
+}
+
+/**
+ * Parses markdown inside collapsible content placeholders.
+ * marked.parse() skips markdown inside HTML blocks, so we handle collapsible
+ * content separately: extract it, parse it with marked, and inject it back.
+ */
+function parseCollapsibleContent(html: string): string {
+  return html.replace(
+    /<!--COLLAPSIBLE_CONTENT_START-->([\s\S]*?)<!--COLLAPSIBLE_CONTENT_END-->/g,
+    (_match, content: string) => {
+      const parsed = marked.parse(content.trim()) as string;
+      return `<div class="collapsible-content">${parsed}</div>`;
+    },
+  );
 }
 
 function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptions): string {
   const preprocessed = transformJsxComponents(mdxContent);
   const rawHtml = marked.parse(preprocessed) as string;
-  const htmlContent = wrapSectionsInCards(rawHtml);
+  const withCollapsibles = parseCollapsibleContent(rawHtml);
+  const htmlContent = wrapSectionsInCards(withCollapsibles);
   const safeTitle = escapeHtml(title);
   const faviconTag = iconUrl
     ? `<link rel="icon" href="${escapeHtml(iconUrl)}" />`
@@ -351,20 +421,42 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     .interactive-image img:hover {
       transform: scale(1.02);
     }
+    .interactive-image img.img-broken {
+      display: none;
+    }
+    .interactive-image:has(.img-broken) {
+      display: block;
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+    }
     .interactive-image-caption {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: #64748b;
       margin-top: 6px;
       text-align: center;
     }
 
+    /* --- Image gallery grid --- */
+    .card .interactive-image {
+      width: calc(50% - 8px);
+      vertical-align: top;
+      margin: 8px 4px;
+    }
+    @media (max-width: 640px) {
+      .card .interactive-image { width: 100%; margin: 8px 0; }
+    }
+
     /* --- ClientLogo --- */
     .client-logo {
-      display: flex;
+      display: inline-flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      min-width: 80px;
+      gap: 8px;
+      min-width: 100px;
+      padding: 12px;
     }
     .client-logo img {
       width: 56px;
@@ -381,10 +473,10 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
       opacity: 1;
     }
     .client-logo-name {
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       color: #64748b;
       text-align: center;
-      max-width: 90px;
+      max-width: 100px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -456,9 +548,14 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
       color: #475569;
     }
 
-    /* --- not-prose helper --- */
-    .not-prose { all: initial; display: block; font-family: inherit; color: inherit; }
-    .not-prose * { margin: 0; padding: 0; }
+    /* Logo grid layout — logos rendered side-by-side */
+    .card p:has(.client-logo) {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 1em 0;
+    }
 
     /* --- Footer --- */
     .footer {
