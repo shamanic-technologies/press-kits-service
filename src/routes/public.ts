@@ -24,8 +24,27 @@ interface RenderOptions {
   brandDomain: string | null;
 }
 
+/**
+ * Wraps each <h2> section (h2 + all siblings until the next h2/h1) in a
+ * <section class="card"> div. Content before the first h2 stays unwrapped.
+ */
+function wrapSectionsInCards(html: string): string {
+  // Split on h2 tags while keeping them in the result
+  const parts = html.split(/(?=<h2[\s>])/);
+  if (parts.length <= 1) return html;
+
+  // First part is content before any h2 (intro text) — leave unwrapped
+  const intro = parts[0];
+  const sections = parts.slice(1).map(
+    (section) => `<section class="card">${section}</section>`
+  );
+
+  return intro + sections.join("");
+}
+
 function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptions): string {
-  const htmlContent = marked.parse(mdxContent) as string;
+  const rawHtml = marked.parse(mdxContent) as string;
+  const htmlContent = wrapSectionsInCards(rawHtml);
   const safeTitle = escapeHtml(title);
   const faviconTag = iconUrl
     ? `<link rel="icon" href="${escapeHtml(iconUrl)}" />`
@@ -127,11 +146,25 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     .container {
       max-width: 760px;
       margin: 0 auto;
-      padding: 48px 24px 96px;
+      padding: 40px 24px 96px;
     }
 
     /* Strip the first h1 from content since we show it in the header */
     .content > h1:first-child { display: none; }
+
+    /* --- Cards --- */
+    .content .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 28px 32px 24px;
+      margin: 20px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+      transition: box-shadow 0.2s;
+    }
+    .content .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    }
 
     .content h1 {
       font-size: 2rem;
@@ -142,31 +175,31 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
       color: #0f172a;
     }
     .content h2 {
-      font-size: 1.35rem;
+      font-size: 1.2rem;
       font-weight: 600;
-      margin: 2.5em 0 0.75em;
       color: #0f172a;
       letter-spacing: -0.01em;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e2e8f0;
+      margin: 0 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f1f5f9;
     }
     .content h3 {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin: 1.8em 0 0.5em;
+      margin: 1.4em 0 0.4em;
       color: #334155;
     }
     .content p {
-      margin: 0.75em 0;
+      margin: 0.6em 0;
       color: #475569;
     }
     .content ul, .content ol {
-      margin: 0.75em 0;
+      margin: 0.6em 0;
       padding-left: 1.5em;
       color: #475569;
     }
     .content li {
-      margin: 0.4em 0;
+      margin: 0.35em 0;
     }
     .content li::marker {
       color: #94a3b8;
@@ -174,12 +207,12 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     .content hr {
       border: none;
       border-top: 1px solid #e2e8f0;
-      margin: 2.5em 0;
+      margin: 2em 0;
     }
     .content table {
       width: 100%;
       border-collapse: collapse;
-      margin: 1.5em 0;
+      margin: 1em 0;
       font-size: 0.95rem;
       border-radius: 8px;
       overflow: hidden;
@@ -187,7 +220,7 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     }
     .content th {
       text-align: left;
-      padding: 12px 16px;
+      padding: 10px 14px;
       font-weight: 600;
       font-size: 0.8rem;
       text-transform: uppercase;
@@ -198,7 +231,7 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     }
     .content td {
       text-align: left;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-bottom: 1px solid #f1f5f9;
       color: #475569;
     }
@@ -207,8 +240,8 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
     }
     .content blockquote {
       border-left: 3px solid #6366f1;
-      padding: 12px 20px;
-      margin: 1.5em 0;
+      padding: 10px 18px;
+      margin: 1em 0;
       color: #475569;
       background: #f8fafc;
       border-radius: 0 8px 8px 0;
@@ -256,8 +289,9 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
       .header-inner { gap: 16px; }
       .brand-logo { width: 48px; height: 48px; border-radius: 10px; }
       .header-text .page-title { font-size: 1.4rem; }
-      .container { padding: 32px 20px 64px; }
-      .content h2 { font-size: 1.2rem; }
+      .container { padding: 24px 16px 64px; }
+      .content .card { padding: 20px 20px 18px; border-radius: 10px; margin: 14px 0; }
+      .content h2 { font-size: 1.1rem; }
     }
   </style>
 </head>
