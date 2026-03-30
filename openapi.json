@@ -323,13 +323,10 @@
           },
           "instruction": {
             "type": "string",
-            "description": "User instruction for the generation workflow.",
+            "description": "User instruction for the generation workflow. If omitted, generation proceeds using brand data only.",
             "example": "Create a professional press kit highlighting our Q1 2026 product launches and sustainability initiatives"
           }
-        },
-        "required": [
-          "instruction"
-        ]
+        }
       },
       "ViewStatsFlatResponse": {
         "type": "object",

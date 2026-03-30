@@ -105,8 +105,8 @@ export const CreateMediaKitRequestSchema = z
         "Target a specific media kit. If omitted, the latest active kit in the scope (org + brand + campaign) is used. If no kit exists, a new one is created from scratch.",
       example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     }),
-    instruction: z.string().openapi({
-      description: "User instruction for the generation workflow.",
+    instruction: z.string().optional().openapi({
+      description: "User instruction for the generation workflow. If omitted, generation proceeds using brand data only.",
       example: "Create a professional press kit highlighting our Q1 2026 product launches and sustainability initiatives",
     }),
   })

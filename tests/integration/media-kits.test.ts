@@ -378,6 +378,17 @@ describe("Media Kits", () => {
       expect(res.body.campaignId).toBe("camp-789");
     });
 
+    it("creates kit without instruction", async () => {
+      const res = await request(app)
+        .post("/media-kits")
+        .set(headers)
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("generating");
+      expect(res.body.parentMediaKitId).toBeNull();
+    });
+
     it("passes x-run-id as parentRunId to createRun", async () => {
       const { createRun } = await import("../../src/lib/runs-client.js");
 
