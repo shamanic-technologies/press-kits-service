@@ -77,7 +77,7 @@ describe("Public", () => {
       expect(res.text).toContain("https://cdn.example.com/logo.png");
     });
 
-    it("falls back to logo.dev via brandDomain when iconUrl is not set", async () => {
+    it("falls back to logo.dev via brandDomain with token when iconUrl is not set", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_domain",
         title: "Domain Kit",
@@ -91,6 +91,7 @@ describe("Public", () => {
       expect(res.status).toBe(200);
       expect(res.text).toContain('class="brand-logo"');
       expect(res.text).toContain("https://img.logo.dev/example.com");
+      expect(res.text).toContain("token=test-logo-dev-token");
       expect(res.text).toContain('onerror="this.style.display=');
     });
 
@@ -208,7 +209,7 @@ describe("Public", () => {
       expect(res.text).toContain("Our team at the summit");
     });
 
-    it("renders ClientLogo with Clearbit image and grayscale", async () => {
+    it("renders ClientLogo with logo.dev image and token", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_clogo",
         title: "Logo Kit",
@@ -222,6 +223,8 @@ describe("Public", () => {
       expect(res.text).toContain('class="client-logo"');
       expect(res.text).toContain("https://img.logo.dev/acme.com");
       expect(res.text).toContain("Acme Corp");
+      // Token from key-service should be included in the logo URL
+      expect(res.text).toContain("token=test-logo-dev-token");
     });
 
     it("renders Collapsible as details/summary", async () => {

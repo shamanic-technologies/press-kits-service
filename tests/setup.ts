@@ -10,6 +10,10 @@ vi.mock("../src/lib/dynasty-client.js", () => ({
   resolveWorkflowDynastySlugs: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock("../src/lib/key-client.js", () => ({
+  getPlatformKey: vi.fn().mockResolvedValue("test-logo-dev-token"),
+}));
+
 vi.mock("../src/lib/runs-client.js", () => ({
   createRun: vi.fn().mockResolvedValue({ id: "test-run-id" }),
   updateRunStatus: vi.fn().mockResolvedValue(undefined),
