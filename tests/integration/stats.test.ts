@@ -1,7 +1,11 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import { createTestApp, getAuthHeaders } from "../helpers/test-app.js";
 import { cleanTestData, insertTestMediaKit, insertTestView, closeDb } from "../helpers/test-db.js";
+import { resolveFeatureDynastySlugs, resolveWorkflowDynastySlugs } from "../../src/lib/dynasty-client.js";
+
+const mockResolveFeature = vi.mocked(resolveFeatureDynastySlugs);
+const mockResolveWorkflow = vi.mocked(resolveWorkflowDynastySlugs);
 
 const app = createTestApp();
 const headers = getAuthHeaders();
@@ -9,6 +13,7 @@ const headers = getAuthHeaders();
 describe("Stats", () => {
   beforeEach(async () => {
     await cleanTestData();
+    vi.clearAllMocks();
   });
 
   afterAll(async () => {
@@ -298,76 +303,43 @@ describe("Stats", () => {
       expect(g2.totalViews).toBe(2);
     });
 
-    it("filters by featureDynastySlug", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "press-kit-page-generation" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "other-feature" });
+    it("filters by featureDynastySlug via service resolution", async () => {
+      // Dynasty "press-kit-page-generation" maps to versioned slugs v1 and v2
+      mockResolveFeature.mockResolvedValue(["press-kit-v1", "press-kit-v2"]);
+
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v1" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v2" });
+      const kit3 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "other-feature" });
 
       await insertTestView({ mediaKitId: kit1.id, country: "US" });
       await insertTestView({ mediaKitId: kit2.id, country: "US" });
+      await insertTestView({ mediaKitId: kit3.id, country: "US" });
 
       const res = await request(app)
         .get("/media-kits/stats/views?featureDynastySlug=press-kit-page-generation")
         .set(headers);
 
       expect(res.status).toBe(200);
-      expect(res.body.totalViews).toBe(1);
+      expect(res.body.totalViews).toBe(2);
+      expect(mockResolveFeature).toHaveBeenCalledWith("press-kit-page-generation", expect.anything());
     });
 
-    it("filters by workflowDynastySlug", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "gen-press-kit" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "gen-other" });
+    it("filters by workflowDynastySlug via service resolution", async () => {
+      mockResolveWorkflow.mockResolvedValue(["gen-press-kit", "gen-press-kit-v2"]);
+
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "gen-press-kit" });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowSlug: "gen-other" });
 
       await insertTestView({ mediaKitId: kit1.id, country: "US" });
       await insertTestView({ mediaKitId: kit2.id, country: "FR" });
 
       const res = await request(app)
-        .get("/media-kits/stats/views?workflowDynastySlug=gen-press-kit")
+        .get("/media-kits/stats/views?workflowDynastySlug=gen-press-kit-dynasty")
         .set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.totalViews).toBe(1);
-    });
-
-    it("returns grouped stats by featureDynastySlug", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "dynasty-a" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureDynastySlug: "dynasty-b" });
-
-      await insertTestView({ mediaKitId: kit1.id, country: "US" });
-      await insertTestView({ mediaKitId: kit2.id, country: "US" });
-      await insertTestView({ mediaKitId: kit2.id, country: "FR" });
-
-      const res = await request(app)
-        .get("/media-kits/stats/views?groupBy=featureDynastySlug")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      expect(res.body.groups).toHaveLength(2);
-
-      const ga = res.body.groups.find((g: { key: string }) => g.key === "dynasty-a");
-      const gb = res.body.groups.find((g: { key: string }) => g.key === "dynasty-b");
-      expect(ga.totalViews).toBe(1);
-      expect(gb.totalViews).toBe(2);
-    });
-
-    it("returns grouped stats by workflowDynastySlug", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wf-dynasty-a" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", workflowDynastySlug: "wf-dynasty-b" });
-
-      await insertTestView({ mediaKitId: kit1.id, country: "US" });
-      await insertTestView({ mediaKitId: kit1.id, country: "FR" });
-      await insertTestView({ mediaKitId: kit2.id, country: "DE" });
-
-      const res = await request(app)
-        .get("/media-kits/stats/views?groupBy=workflowDynastySlug")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      expect(res.body.groups).toHaveLength(2);
-
-      const ga = res.body.groups.find((g: { key: string }) => g.key === "wf-dynasty-a");
-      const gb = res.body.groups.find((g: { key: string }) => g.key === "wf-dynasty-b");
-      expect(ga.totalViews).toBe(2);
-      expect(gb.totalViews).toBe(1);
+      expect(mockResolveWorkflow).toHaveBeenCalledWith("gen-press-kit-dynasty", expect.anything());
     });
 
     it("returns grouped stats by workflowSlug", async () => {

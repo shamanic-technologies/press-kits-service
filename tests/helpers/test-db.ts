@@ -20,8 +20,6 @@ export async function insertTestMediaKit(
       campaignId: data.campaignId ?? null,
       featureSlug: data.featureSlug ?? null,
       workflowSlug: data.workflowSlug ?? null,
-      featureDynastySlug: data.featureDynastySlug ?? null,
-      workflowDynastySlug: data.workflowDynastySlug ?? null,
       title: data.title ?? null,
       iconUrl: data.iconUrl ?? null,
       mdxPageContent: data.mdxPageContent ?? null,
