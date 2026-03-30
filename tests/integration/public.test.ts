@@ -77,7 +77,7 @@ describe("Public", () => {
       expect(res.text).toContain("https://cdn.example.com/logo.png");
     });
 
-    it("falls back to Google favicon via brandDomain when iconUrl is not set", async () => {
+    it("falls back to logo.dev via brandDomain when iconUrl is not set", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_domain",
         title: "Domain Kit",
@@ -90,7 +90,7 @@ describe("Public", () => {
 
       expect(res.status).toBe(200);
       expect(res.text).toContain('class="brand-logo"');
-      expect(res.text).toContain("https://www.google.com/s2/favicons?domain=example.com");
+      expect(res.text).toContain("https://img.logo.dev/example.com");
       expect(res.text).toContain('onerror="this.style.display=');
     });
 

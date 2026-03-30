@@ -53,7 +53,7 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
   const logoTag = iconUrl
     ? `<img src="${escapeHtml(iconUrl)}" alt="${safeTitle}" class="brand-logo" />`
     : brandDomain
-      ? `<img src="https://www.google.com/s2/favicons?domain=${escapeHtml(brandDomain)}&sz=128" alt="${safeTitle}" class="brand-logo" onerror="this.style.display='none'" />`
+      ? `<img src="https://img.logo.dev/${escapeHtml(brandDomain)}?format=png" alt="${safeTitle}" class="brand-logo" onerror="this.style.display='none'" />`
       : "";
 
   return `<!DOCTYPE html>
