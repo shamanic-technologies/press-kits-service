@@ -28,8 +28,8 @@ const optionalContextHeaders = z.object({
   "x-campaign-id": z.string().optional().openapi({ description: "Campaign UUID — scopes kit to a specific campaign" }),
   "x-feature-slug": z.string().optional().openapi({ description: "Feature slug (e.g. 'press-kit-v2')" }),
   "x-workflow-slug": z.string().optional().openapi({ description: "Workflow slug override for generation" }),
-  "x-feature-dynasty-slug": z.string().optional().openapi({ description: "Stable feature dynasty slug (version-independent)" }),
-  "x-workflow-dynasty-slug": z.string().optional().openapi({ description: "Stable workflow dynasty slug (version-independent)" }),
+  "x-feature-dynasty-slug": z.string().optional().openapi({ description: "Stable feature dynasty slug (version-independent). Forwarded to downstream services." }),
+  "x-workflow-dynasty-slug": z.string().optional().openapi({ description: "Stable workflow dynasty slug (version-independent). Forwarded to downstream services." }),
 });
 
 // --- Media Kit Schemas ---
@@ -42,8 +42,6 @@ export const MediaKitResponseSchema = z
     campaignId: z.string().nullable().openapi({ example: "c7d8e9f0-a1b2-3456-cdef-789012345678" }),
     featureSlug: z.string().nullable().openapi({ example: "press-kit-v2" }),
     workflowSlug: z.string().nullable().openapi({ example: "generate-press-kit" }),
-    featureDynastySlug: z.string().nullable().openapi({ example: "press-kit-page-generation" }),
-    workflowDynastySlug: z.string().nullable().openapi({ example: "generate-press-kit" }),
     shareToken: z.string().uuid().nullable().openapi({
       description: "Public share token. Use with GET /public/{token} to access the kit without authentication.",
       example: "f47ac10b-58cc-4372-a567-0e02b2c3d479",

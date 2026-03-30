@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { sql as pgSql } from "../db/index.js";
 import { batchGetCosts } from "../lib/runs-client.js";
+import { resolveFeatureDynastySlugs, resolveWorkflowDynastySlugs } from "../lib/dynasty-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
@@ -36,20 +37,131 @@ const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> =
     select: "mk.workflow_slug",
     groupBy: "mk.workflow_slug",
   },
+  // Dynasty groupBy: we group by the versioned slug in SQL, then re-aggregate in JS
   featureDynastySlug: {
-    select: "mk.feature_dynasty_slug",
-    groupBy: "mk.feature_dynasty_slug",
+    select: "mk.feature_slug",
+    groupBy: "mk.feature_slug",
   },
   workflowDynastySlug: {
-    select: "mk.workflow_dynasty_slug",
-    groupBy: "mk.workflow_dynasty_slug",
+    select: "mk.workflow_slug",
+    groupBy: "mk.workflow_slug",
   },
 };
+
+/**
+ * Resolve dynasty slug filters into IN clauses on versioned slug columns.
+ * Returns the additional SQL conditions and params.
+ */
+async function resolveDynastyFilters(
+  q: Record<string, string | undefined>,
+  idx: number,
+  ctx: ReturnType<typeof getContextHeaders>
+): Promise<{ conditions: string[]; params: string[]; nextIdx: number }> {
+  const conditions: string[] = [];
+  const params: string[] = [];
+  let nextIdx = idx;
+
+  if (q.featureDynastySlug) {
+    const slugs = await resolveFeatureDynastySlugs(q.featureDynastySlug, ctx);
+    if (slugs.length === 0) {
+      // No slugs in this dynasty — force empty result
+      conditions.push("FALSE");
+    } else {
+      const placeholders = slugs.map(() => `$${nextIdx++}`);
+      conditions.push(`mk.feature_slug IN (${placeholders.join(", ")})`);
+      params.push(...slugs);
+    }
+  }
+
+  if (q.workflowDynastySlug) {
+    const slugs = await resolveWorkflowDynastySlugs(q.workflowDynastySlug, ctx);
+    if (slugs.length === 0) {
+      conditions.push("FALSE");
+    } else {
+      const placeholders = slugs.map(() => `$${nextIdx++}`);
+      conditions.push(`mk.workflow_slug IN (${placeholders.join(", ")})`);
+      params.push(...slugs);
+    }
+  }
+
+  return { conditions, params, nextIdx };
+}
+
+/**
+ * For dynasty groupBy: resolve all versioned slugs back to their dynasty slug,
+ * then re-aggregate the SQL groups that share the same dynasty.
+ */
+async function buildDynastySlugMap(
+  groupBy: string,
+  versionedKeys: string[],
+  ctx: ReturnType<typeof getContextHeaders>
+): Promise<Map<string, string>> {
+  // Map from versioned slug → dynasty slug
+  const map = new Map<string, string>();
+
+  if (groupBy === "featureDynastySlug") {
+    // All these versioned slugs belong to potentially different dynasties.
+    // features-service exposes GET /features/dynasty?slug=X to resolve one slug.
+    // But we also have GET /features/dynasty/slugs?dynastySlug=X which goes the other way.
+    // The simplest approach: call the resolve endpoint for each unique slug.
+    // Number of unique feature slugs per org is typically very small (< 10).
+    const FEATURES_SERVICE_URL = process.env.FEATURES_SERVICE_URL || "http://localhost:3010";
+    const FEATURES_SERVICE_API_KEY = process.env.FEATURES_SERVICE_API_KEY || "";
+    const { buildForwardHeaders } = await import("../middleware/auth.js");
+    const headers: Record<string, string> = { "X-API-Key": FEATURES_SERVICE_API_KEY };
+    if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
+
+    await Promise.all(
+      versionedKeys.map(async (slug) => {
+        try {
+          const url = `${FEATURES_SERVICE_URL}/features/dynasty?slug=${encodeURIComponent(slug)}`;
+          const res = await fetch(url, { headers });
+          if (res.ok) {
+            const body = (await res.json()) as { feature_dynasty_slug: string };
+            map.set(slug, body.feature_dynasty_slug);
+          } else {
+            // If we can't resolve, use the slug itself as the dynasty key
+            map.set(slug, slug);
+          }
+        } catch {
+          map.set(slug, slug);
+        }
+      })
+    );
+  } else if (groupBy === "workflowDynastySlug") {
+    // workflow-service has GET /workflows/dynasty?slug=X (reverse lookup)
+    const WORKFLOW_SERVICE_URL = process.env.WORKFLOW_SERVICE_URL || "http://localhost:3004";
+    const WORKFLOW_SERVICE_API_KEY = process.env.WORKFLOW_SERVICE_API_KEY || "";
+    const { buildForwardHeaders } = await import("../middleware/auth.js");
+    const headers: Record<string, string> = { "X-API-Key": WORKFLOW_SERVICE_API_KEY };
+    if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
+
+    await Promise.all(
+      versionedKeys.map(async (slug) => {
+        try {
+          const url = `${WORKFLOW_SERVICE_URL}/workflows/dynasty?slug=${encodeURIComponent(slug)}`;
+          const res = await fetch(url, { headers });
+          if (res.ok) {
+            const body = (await res.json()) as { dynastySlug: string };
+            map.set(slug, body.dynastySlug);
+          } else {
+            map.set(slug, slug);
+          }
+        } catch {
+          map.set(slug, slug);
+        }
+      })
+    );
+  }
+
+  return map;
+}
 
 // GET /media-kits/stats/views — aggregated view metrics
 router.get("/media-kits/stats/views", async (req, res) => {
   try {
     const orgId = req.orgId;
+    const ctx = getContextHeaders(req);
     const q = req.query as Record<string, string | undefined>;
 
     const conditions: string[] = ["mk.org_id = $1"];
@@ -76,14 +188,6 @@ router.get("/media-kits/stats/views", async (req, res) => {
       conditions.push(`mk.workflow_slug = $${idx++}`);
       params.push(q.workflowSlug);
     }
-    if (q.featureDynastySlug) {
-      conditions.push(`mk.feature_dynasty_slug = $${idx++}`);
-      params.push(q.featureDynastySlug);
-    }
-    if (q.workflowDynastySlug) {
-      conditions.push(`mk.workflow_dynasty_slug = $${idx++}`);
-      params.push(q.workflowDynastySlug);
-    }
     if (q.from) {
       conditions.push(`mkv.viewed_at >= $${idx++}`);
       params.push(q.from);
@@ -93,11 +197,18 @@ router.get("/media-kits/stats/views", async (req, res) => {
       params.push(q.to);
     }
 
+    // Resolve dynasty slug filters via service calls
+    const dynasty = await resolveDynastyFilters(q, idx, ctx);
+    conditions.push(...dynasty.conditions);
+    params.push(...dynasty.params);
+    idx = dynasty.nextIdx;
+
     const where = conditions.join(" AND ");
     const groupBy = q.groupBy;
 
     if (groupBy && VALID_GROUP_BY.has(groupBy)) {
       const expr = GROUP_BY_EXPRESSION[groupBy];
+      const isDynastyGroupBy = groupBy === "featureDynastySlug" || groupBy === "workflowDynastySlug";
 
       const rows = await pgSql.unsafe(
         `SELECT
@@ -113,14 +224,53 @@ router.get("/media-kits/stats/views", async (req, res) => {
         params
       );
 
-      res.json({
-        groups: rows.map((r: Record<string, unknown>) => ({
-          key: r.group_key != null ? String(r.group_key) : null,
-          totalViews: Number(r.total_views),
-          uniqueVisitors: Number(r.unique_visitors),
-          lastViewedAt: r.last_viewed_at ? String(r.last_viewed_at) : null,
-        })),
-      });
+      if (isDynastyGroupBy) {
+        // Re-aggregate by dynasty slug
+        const versionedKeys = rows
+          .map((r: Record<string, unknown>) => r.group_key != null ? String(r.group_key) : null)
+          .filter((k): k is string => k !== null);
+
+        const dynastyMap = await buildDynastySlugMap(groupBy, versionedKeys, ctx);
+
+        const merged = new Map<string, { totalViews: number; uniqueVisitors: number; lastViewedAt: string | null }>();
+        for (const r of rows) {
+          const versionedSlug = r.group_key != null ? String(r.group_key) : null;
+          const dynastyKey = versionedSlug ? (dynastyMap.get(versionedSlug) ?? versionedSlug) : null;
+          const key = dynastyKey ?? "__null__";
+          const existing = merged.get(key);
+          if (existing) {
+            existing.totalViews += Number(r.total_views);
+            existing.uniqueVisitors += Number(r.unique_visitors);
+            if (r.last_viewed_at && (!existing.lastViewedAt || String(r.last_viewed_at) > existing.lastViewedAt)) {
+              existing.lastViewedAt = String(r.last_viewed_at);
+            }
+          } else {
+            merged.set(key, {
+              totalViews: Number(r.total_views),
+              uniqueVisitors: Number(r.unique_visitors),
+              lastViewedAt: r.last_viewed_at ? String(r.last_viewed_at) : null,
+            });
+          }
+        }
+
+        res.json({
+          groups: Array.from(merged.entries()).map(([key, v]) => ({
+            key: key === "__null__" ? null : key,
+            totalViews: v.totalViews,
+            uniqueVisitors: v.uniqueVisitors,
+            lastViewedAt: v.lastViewedAt,
+          })),
+        });
+      } else {
+        res.json({
+          groups: rows.map((r: Record<string, unknown>) => ({
+            key: r.group_key != null ? String(r.group_key) : null,
+            totalViews: Number(r.total_views),
+            uniqueVisitors: Number(r.unique_visitors),
+            lastViewedAt: r.last_viewed_at ? String(r.last_viewed_at) : null,
+          })),
+        });
+      }
     } else {
       const rows = await pgSql.unsafe(
         `SELECT
@@ -179,14 +329,12 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       conditions.push(`mk.workflow_slug = $${idx++}`);
       params.push(q.workflowSlug);
     }
-    if (q.featureDynastySlug) {
-      conditions.push(`mk.feature_dynasty_slug = $${idx++}`);
-      params.push(q.featureDynastySlug);
-    }
-    if (q.workflowDynastySlug) {
-      conditions.push(`mk.workflow_dynasty_slug = $${idx++}`);
-      params.push(q.workflowDynastySlug);
-    }
+
+    // Resolve dynasty slug filters via service calls
+    const dynasty = await resolveDynastyFilters(q, idx, ctx);
+    conditions.push(...dynasty.conditions);
+    params.push(...dynasty.params);
+    idx = dynasty.nextIdx;
 
     const where = conditions.join(" AND ");
 
@@ -196,12 +344,14 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       campaignId: "campaign_id",
       featureSlug: "feature_slug",
       workflowSlug: "workflow_slug",
-      featureDynastySlug: "feature_dynasty_slug",
-      workflowDynastySlug: "workflow_dynasty_slug",
+      // Dynasty groupBy: group by versioned slug in SQL, re-aggregate in JS
+      featureDynastySlug: "feature_slug",
+      workflowDynastySlug: "workflow_slug",
     };
 
     const costGroupBy = q.groupBy as string | undefined;
     const groupByColumn = costGroupBy ? COST_GROUP_BY_COLUMN[costGroupBy] : undefined;
+    const isDynastyGroupBy = costGroupBy === "featureDynastySlug" || costGroupBy === "workflowDynastySlug";
 
     // When grouping, we need the group column from the right table
     const groupBySelectExpr = groupByColumn
@@ -242,6 +392,7 @@ router.get("/media-kits/stats/costs", async (req, res) => {
     const costMap = new Map(costs.map((c) => [c.runId, c]));
 
     if (costGroupBy && groupByColumn) {
+      // Build initial groups by versioned slug
       const grouped = new Map<string, { total: number; actual: number; provisioned: number; count: number }>();
 
       for (const row of rows) {
@@ -257,15 +408,47 @@ router.get("/media-kits/stats/costs", async (req, res) => {
         grouped.set(key, entry);
       }
 
-      res.json({
-        groups: Array.from(grouped.entries()).map(([key, v]) => ({
-          dimensions: { [costGroupBy]: key === "__null__" ? null : key },
-          totalCostInUsdCents: v.total,
-          actualCostInUsdCents: v.actual,
-          provisionedCostInUsdCents: v.provisioned,
-          runCount: v.count,
-        })),
-      });
+      if (isDynastyGroupBy) {
+        // Re-aggregate by dynasty slug
+        const versionedKeys = Array.from(grouped.keys()).filter((k) => k !== "__null__");
+        const dynastyMap = await buildDynastySlugMap(costGroupBy, versionedKeys, ctx);
+
+        const merged = new Map<string, { total: number; actual: number; provisioned: number; count: number }>();
+        for (const [versionedKey, entry] of grouped.entries()) {
+          const dynastyKey = versionedKey === "__null__"
+            ? "__null__"
+            : (dynastyMap.get(versionedKey) ?? versionedKey);
+          const existing = merged.get(dynastyKey);
+          if (existing) {
+            existing.total += entry.total;
+            existing.actual += entry.actual;
+            existing.provisioned += entry.provisioned;
+            existing.count += entry.count;
+          } else {
+            merged.set(dynastyKey, { ...entry });
+          }
+        }
+
+        res.json({
+          groups: Array.from(merged.entries()).map(([key, v]) => ({
+            dimensions: { [costGroupBy]: key === "__null__" ? null : key },
+            totalCostInUsdCents: v.total,
+            actualCostInUsdCents: v.actual,
+            provisionedCostInUsdCents: v.provisioned,
+            runCount: v.count,
+          })),
+        });
+      } else {
+        res.json({
+          groups: Array.from(grouped.entries()).map(([key, v]) => ({
+            dimensions: { [costGroupBy]: key === "__null__" ? null : key },
+            totalCostInUsdCents: v.total,
+            actualCostInUsdCents: v.actual,
+            provisionedCostInUsdCents: v.provisioned,
+            runCount: v.count,
+          })),
+        });
+      }
     } else {
       let total = 0, actual = 0, provisioned = 0;
       for (const cost of costs) {

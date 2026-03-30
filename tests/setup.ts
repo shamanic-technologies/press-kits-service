@@ -5,6 +5,11 @@ process.env.PRESS_KITS_SERVICE_DATABASE_URL =
 process.env.PRESS_KITS_SERVICE_API_KEY = "test-api-key";
 process.env.NODE_ENV = "test";
 
+vi.mock("../src/lib/dynasty-client.js", () => ({
+  resolveFeatureDynastySlugs: vi.fn().mockResolvedValue([]),
+  resolveWorkflowDynastySlugs: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("../src/lib/runs-client.js", () => ({
   createRun: vi.fn().mockResolvedValue({ id: "test-run-id" }),
   updateRunStatus: vi.fn().mockResolvedValue(undefined),
@@ -51,7 +56,7 @@ beforeAll(async () => {
   )`;
   await sql`CREATE INDEX IF NOT EXISTS idx_runs_media_kit_id ON media_kit_runs USING btree (media_kit_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_runs_run_id ON media_kit_runs USING btree (run_id)`;
-  // Dynasty slug columns
-  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS feature_dynasty_slug varchar`;
-  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS workflow_dynasty_slug varchar`;
+  // Drop dynasty slug columns (removed in favor of service-call resolution)
+  await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS feature_dynasty_slug`;
+  await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS workflow_dynasty_slug`;
 });
