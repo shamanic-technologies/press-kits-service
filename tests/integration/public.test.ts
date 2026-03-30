@@ -37,11 +37,11 @@ describe("Public", () => {
       expect(res.text).toContain("This is a press kit.");
     });
 
-    it("renders modern layout with header and Inter font", async () => {
+    it("renders modern layout with header, Inter font, and card sections", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_modern",
         title: "Modern Kit",
-        mdxPageContent: "# Modern Kit\n\nContent here.",
+        mdxPageContent: "# Modern Kit\n\nIntro paragraph.\n\n## Overview\n\nOverview content.\n\n## Team\n\nTeam content.",
         status: "validated",
       });
 
@@ -53,6 +53,12 @@ describe("Public", () => {
       expect(res.text).toContain('class="header"');
       expect(res.text).toContain('class="page-title"');
       expect(res.text).toContain("Press Kit");
+      // Each h2 section is wrapped in a card
+      expect(res.text).toContain('<section class="card"><h2>Overview</h2>');
+      expect(res.text).toContain('<section class="card"><h2>Team</h2>');
+      // Intro text before first h2 is NOT in a card
+      expect(res.text).toContain("<p>Intro paragraph.</p>");
+      expect(res.text).not.toMatch(/<section class="card">.*<p>Intro paragraph\.<\/p>/s);
     });
 
     it("shows brand logo from iconUrl in header", async () => {
