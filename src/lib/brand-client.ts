@@ -57,8 +57,7 @@ export async function getBrand(brandId: string, ctx?: ContextHeaders): Promise<B
   if (response.status === 404) return null;
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[press-kits-service] GET /brands/${brandId} failed (${response.status}): ${text}`);
-    return null;
+    throw new Error(`[press-kits-service] GET /brands/${brandId} failed (${response.status}): ${text}`);
   }
 
   const data = (await response.json()) as { brand: BrandInfo };
@@ -85,8 +84,7 @@ export async function extractBrandFields(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[press-kits-service] POST /brands/${brandId}/extract-fields failed (${response.status}): ${text}`);
-    return [];
+    throw new Error(`[press-kits-service] POST /brands/${brandId}/extract-fields failed (${response.status}): ${text}`);
   }
 
   const data = (await response.json()) as { results: ExtractedField[] };
@@ -113,8 +111,7 @@ export async function extractBrandImages(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[press-kits-service] POST /brands/${brandId}/extract-images failed (${response.status}): ${text}`);
-    return [];
+    throw new Error(`[press-kits-service] POST /brands/${brandId}/extract-images failed (${response.status}): ${text}`);
   }
 
   const data = (await response.json()) as { brandId: string; results: ExtractImagesResult[] };

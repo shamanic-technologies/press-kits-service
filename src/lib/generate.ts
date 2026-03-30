@@ -111,7 +111,9 @@ Use the brand data provided to fill in ALL details. NEVER use placeholder bracke
 - \`caption\`: Visible text displayed below image and in modal title (optional)
 - Use for product photos, team photos, event images, office spaces
 
-When brand images are provided, use \`<InteractiveImage>\` to embed them in relevant sections. Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text, and add a meaningful caption.
+When brand images are provided in the BRAND IMAGES section, use \`<InteractiveImage>\` to embed them in relevant sections. Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text, and add a meaningful caption.
+
+**CRITICAL: ONLY use image URLs that are explicitly provided in the BRAND IMAGES section. NEVER invent, guess, or infer image URLs based on the brand's domain, website content, or any other information. If no BRAND IMAGES section is present, do NOT include any \`<InteractiveImage>\` components or markdown images in the output.**
 
 **Blockquotes** — NEVER include quotation marks inside:
 \`\`\`mdx
