@@ -23,6 +23,7 @@ vi.mock("../../src/lib/brand-client.js", () => ({
   extractBrandFields: (...args: unknown[]) => mockExtractBrandFields(...args),
 }));
 
+
 const { generatePressKit } = await import("../../src/lib/generate.js");
 
 describe("generatePressKit", () => {
@@ -242,6 +243,93 @@ describe("generatePressKit", () => {
       .where(eq(mediaKits.id, kit.id));
     expect(updated.status).toBe("drafted");
     expect(updated.title).toBe("Polarity Course Press Kit");
+  });
+
+  it("stores brandDomain and iconUrl from brand-service during generation", async () => {
+    const brandId = "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5";
+    const kit = await insertTestMediaKit({
+      orgId: "org-logo",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit",
+      instructionType: "initial",
+    });
+
+    mockGetBrand.mockResolvedValue({
+      id: brandId,
+      name: "Acme",
+      domain: "acme.com",
+      brandUrl: "https://acme.com",
+      elevatorPitch: null,
+      bio: null,
+      mission: null,
+      location: null,
+      categories: null,
+      logoUrl: "https://acme.com/logo.png",
+    });
+    mockExtractBrandFields.mockResolvedValue([]);
+    mockComplete.mockResolvedValue({
+      content: "# Acme Press Kit\n\n## Overview\n\nAcme is great.",
+      tokensInput: 100,
+      tokensOutput: 200,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.brandDomain).toBe("acme.com");
+    expect(updated.iconUrl).toBe("https://acme.com/logo.png");
+  });
+
+  it("stores brandDomain even when brand has no logoUrl", async () => {
+    const brandId = "b2222222-2222-2222-2222-222222222222";
+    const kit = await insertTestMediaKit({
+      orgId: "org-nologo",
+      brandId,
+      status: "generating",
+    });
+    await insertTestInstruction({
+      mediaKitId: kit.id,
+      instruction: "Generate press kit",
+      instructionType: "initial",
+    });
+
+    mockGetBrand.mockResolvedValue({
+      id: brandId,
+      name: "NoLogo Corp",
+      domain: "nologo.com",
+      brandUrl: "https://nologo.com",
+      elevatorPitch: null,
+      bio: null,
+      mission: null,
+      location: null,
+      categories: null,
+      logoUrl: null,
+    });
+    mockExtractBrandFields.mockResolvedValue([]);
+    mockComplete.mockResolvedValue({
+      content: "# NoLogo Corp\n\n## Overview\n\nContent.",
+      tokensInput: 100,
+      tokensOutput: 200,
+      model: "claude-sonnet-4-6",
+    });
+
+    await generatePressKit(kit.id);
+
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
+    expect(updated.brandDomain).toBe("nologo.com");
+    expect(updated.iconUrl).toBeNull();
   });
 
   it("skips brand fetch when no brandId and still generates", async () => {

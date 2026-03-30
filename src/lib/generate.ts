@@ -218,6 +218,17 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
 
   const message = buildMessage(data, brandContext);
 
+  // Resolve brand domain and logo URL from brand-service
+  let brandDomain: string | null = null;
+  let logoUrl: string | null = null;
+  if (data.currentKit.brandId) {
+    const brand = await getBrand(data.currentKit.brandId, ctx);
+    if (brand) {
+      brandDomain = brand.domain;
+      logoUrl = brand.logoUrl;
+    }
+  }
+
   const result = await complete(
     {
       message,
@@ -241,6 +252,8 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
       title,
       status: "drafted",
       updatedAt: new Date(),
+      ...(brandDomain ? { brandDomain } : {}),
+      ...(logoUrl ? { iconUrl: logoUrl } : {}),
     })
     .where(eq(mediaKits.id, mediaKitId));
 

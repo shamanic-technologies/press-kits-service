@@ -48,6 +48,10 @@ export const MediaKitResponseSchema = z
     }),
     title: z.string().nullable().openapi({ example: "Acme Corp Press Kit — Q1 2026" }),
     iconUrl: z.string().nullable().openapi({ example: "https://cdn.example.com/brands/acme/icon.png" }),
+    brandDomain: z.string().nullable().openapi({
+      description: "Brand domain used for logo resolution via logo.dev.",
+      example: "acme.com",
+    }),
     mdxPageContent: z.string().nullable().openapi({
       description: "Full MDX content of the press kit page.",
       example: "# Acme Corp\n\nAcme Corp is a leading provider of innovative SaaS solutions...",

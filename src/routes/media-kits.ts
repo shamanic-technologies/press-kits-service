@@ -284,6 +284,7 @@ router.post("/media-kits", async (req, res) => {
           orgId: currentKit.orgId,
           title: currentKit.title,
           iconUrl: currentKit.iconUrl,
+          brandDomain: currentKit.brandDomain,
           mdxPageContent: currentKit.mdxPageContent,
           parentMediaKitId: currentKit.id,
           status: "generating",
