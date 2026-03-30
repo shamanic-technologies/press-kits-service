@@ -261,6 +261,91 @@ describe("Public", () => {
       expect(res.text).not.toContain("className");
     });
 
+    it("parses markdown inside CollapsibleContent", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_collapse_md",
+        title: "Collapsible MD Kit",
+        mdxPageContent: [
+          "# Collapsible MD Kit",
+          "",
+          "<Collapsible>",
+          "<CollapsibleTrigger>",
+          "View Timeline",
+          "</CollapsibleTrigger>",
+          "<CollapsibleContent>",
+          "",
+          "### Project Timeline",
+          "",
+          "- **2025** — Phase one launch",
+          "- **2026** — Phase two expansion",
+          "",
+          "</CollapsibleContent>",
+          "</Collapsible>",
+        ].join("\n"),
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      // Markdown inside collapsible should be parsed to HTML
+      expect(res.text).toContain("<h3>Project Timeline</h3>");
+      expect(res.text).toContain("<strong>2025</strong>");
+      expect(res.text).toContain("<li>");
+      // Should NOT contain raw markdown
+      expect(res.text).not.toContain("### Project Timeline");
+      expect(res.text).not.toContain("- **2025**");
+    });
+
+    it("strips Tailwind utility classes from wrapper divs", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_tailwind",
+        title: "Tailwind Strip Kit",
+        mdxPageContent: '# TW Kit\n\n<div className="not-prose my-6">\n<ClientLogo domain="test.com" name="Test" />\n</div>',
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      // Tailwind classes should be stripped
+      expect(res.text).not.toContain("not-prose");
+      expect(res.text).not.toContain("my-6");
+      // ClientLogo should still render
+      expect(res.text).toContain('class="client-logo"');
+    });
+
+    it("does not double-wrap sections that contain jsx-card", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_nodbwrap",
+        title: "No Double Wrap",
+        mdxPageContent: "# NDW\n\n## Facts\n\n<Card><CardContent>Inner card</CardContent></Card>",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      // Section with jsx-card should NOT be wrapped in an outer card
+      expect(res.text).not.toContain('<section class="card"><h2>Facts</h2>');
+      expect(res.text).toContain('class="jsx-card"');
+    });
+
+    it("adds onerror fallback to InteractiveImage", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_imgerr",
+        title: "Img Error Kit",
+        mdxPageContent: '# Img Kit\n\n<InteractiveImage src="https://broken.example.com/img.jpg" alt="Broken" caption="Missing photo" />',
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("img-broken");
+      expect(res.text).toContain("Missing photo");
+    });
+
     it("escapes brandDomain in logo URL to prevent XSS", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_xss_domain",
