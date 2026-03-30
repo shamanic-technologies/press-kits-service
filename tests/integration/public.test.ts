@@ -191,6 +191,76 @@ describe("Public", () => {
       expect(res.text).toContain("https://cdn.example.com/icon.png");
     });
 
+    it("renders InteractiveImage as figure with img and caption", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_img",
+        title: "Image Kit",
+        mdxPageContent: '# Image Kit\n\n<InteractiveImage src="https://example.com/photo.jpg" alt="Team photo" caption="Our team at the summit" />',
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="interactive-image"');
+      expect(res.text).toContain('src="https://example.com/photo.jpg"');
+      expect(res.text).toContain('alt="Team photo"');
+      expect(res.text).toContain("Our team at the summit");
+    });
+
+    it("renders ClientLogo with Clearbit image and grayscale", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_clogo",
+        title: "Logo Kit",
+        mdxPageContent: '# Logo Kit\n\n<ClientLogo domain="acme.com" name="Acme Corp" />',
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="client-logo"');
+      expect(res.text).toContain("https://img.logo.dev/acme.com");
+      expect(res.text).toContain("Acme Corp");
+    });
+
+    it("renders Collapsible as details/summary", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_collapse",
+        title: "Collapsible Kit",
+        mdxPageContent: "# Collapsible Kit\n\n<Collapsible>\n<CollapsibleTrigger>\nShow More\n</CollapsibleTrigger>\n<CollapsibleContent>\nHidden content here.\n</CollapsibleContent>\n</Collapsible>",
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="collapsible"');
+      expect(res.text).toContain("<summary>");
+      expect(res.text).toContain("Show More");
+      expect(res.text).toContain("Hidden content here.");
+    });
+
+    it("renders Card components as styled divs", async () => {
+      const kit = await insertTestMediaKit({
+        orgId: "org_card",
+        title: "Card Kit",
+        mdxPageContent: '# Card Kit\n\n<div className="not-prose my-6">\n<Card>\n<CardHeader>\n<CardTitle>Key Facts</CardTitle>\n</CardHeader>\n<CardContent>\nSome facts here.\n</CardContent>\n</Card>\n</div>',
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('class="jsx-card"');
+      expect(res.text).toContain('class="jsx-card-header"');
+      expect(res.text).toContain('class="jsx-card-title"');
+      expect(res.text).toContain("Key Facts");
+      expect(res.text).toContain("Some facts here.");
+      // className should be converted to class
+      expect(res.text).not.toContain("className");
+    });
+
     it("escapes brandDomain in logo URL to prevent XSS", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_xss_domain",

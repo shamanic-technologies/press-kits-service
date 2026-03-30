@@ -24,6 +24,68 @@ interface RenderOptions {
   brandDomain: string | null;
 }
 
+function extractAttr(tag: string, attr: string): string | null {
+  const re = new RegExp(`${attr}=(?:"([^"]*)"|'([^']*)'|{["']([^"']*)["']})`);
+  const m = tag.match(re);
+  return m ? (m[1] ?? m[2] ?? m[3]) : null;
+}
+
+/**
+ * Converts JSX components in the MDX output to valid HTML before rendering.
+ * This runs on the raw MDX string BEFORE marked.parse() so that marked
+ * doesn't mangle the JSX tags.
+ */
+function transformJsxComponents(mdx: string): string {
+  let html = mdx;
+
+  // className → class (everywhere)
+  html = html.replace(/\bclassName=/g, "class=");
+
+  // <InteractiveImage src="..." alt="..." caption="..." />
+  html = html.replace(
+    /<InteractiveImage\s+([^>]*?)\/>/g,
+    (_match, attrs: string) => {
+      const src = extractAttr(attrs, "src") ?? "";
+      const alt = extractAttr(attrs, "alt") ?? "";
+      const caption = extractAttr(attrs, "caption");
+      const captionHtml = caption
+        ? `<figcaption class="interactive-image-caption">${caption}</figcaption>`
+        : "";
+      return `<figure class="interactive-image"><img src="${src}" alt="${alt}" loading="lazy" />${captionHtml}</figure>`;
+    },
+  );
+
+  // <ClientLogo domain="..." name="..." />
+  html = html.replace(
+    /<ClientLogo\s+([^>]*?)\/>/g,
+    (_match, attrs: string) => {
+      const domain = extractAttr(attrs, "domain") ?? "";
+      const name = extractAttr(attrs, "name") ?? domain;
+      return `<div class="client-logo"><img src="https://img.logo.dev/${domain}?format=png&size=80" alt="${name}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'client-logo-fallback\\'>${name.charAt(0)}</span><span class=\\'client-logo-name\\'>${name}</span>'" /><span class="client-logo-name">${name}</span></div>`;
+    },
+  );
+
+  // <Collapsible> → <details>, <CollapsibleTrigger> → <summary>, <CollapsibleContent> → <div>
+  html = html.replace(/<Collapsible>/g, '<details class="collapsible">');
+  html = html.replace(/<\/Collapsible>/g, "</details>");
+  html = html.replace(/<CollapsibleTrigger>/g, "<summary>");
+  html = html.replace(/<\/CollapsibleTrigger>/g, "</summary>");
+  html = html.replace(/<CollapsibleContent>/g, '<div class="collapsible-content">');
+  html = html.replace(/<\/CollapsibleContent>/g, "</div>");
+
+  // <Card> family → divs
+  html = html.replace(/<Card>/g, '<div class="jsx-card">');
+  html = html.replace(/<\/Card>/g, "</div>");
+  html = html.replace(/<CardHeader>/g, '<div class="jsx-card-header">');
+  html = html.replace(/<\/CardHeader>/g, "</div>");
+  html = html.replace(/<CardTitle>/g, '<div class="jsx-card-title">');
+  html = html.replace(/<\/CardTitle>/g, "</div>");
+  html = html.replace(/<CardContent>/g, '<div class="jsx-card-content">');
+  html = html.replace(/<\/CardContent>/g, "</div>");
+
+  return html;
+}
+
 /**
  * Wraps each <h2> section (h2 + all siblings until the next h2/h1) in a
  * <section class="card"> div. Content before the first h2 stays unwrapped.
@@ -43,7 +105,8 @@ function wrapSectionsInCards(html: string): string {
 }
 
 function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptions): string {
-  const rawHtml = marked.parse(mdxContent) as string;
+  const preprocessed = transformJsxComponents(mdxContent);
+  const rawHtml = marked.parse(preprocessed) as string;
   const htmlContent = wrapSectionsInCards(rawHtml);
   const safeTitle = escapeHtml(title);
   const faviconTag = iconUrl
@@ -271,6 +334,131 @@ function renderHtmlPage({ title, mdxContent, iconUrl, brandDomain }: RenderOptio
       border-radius: 8px;
       margin: 1em 0;
     }
+
+    /* --- InteractiveImage --- */
+    .interactive-image {
+      margin: 1em 0;
+      display: inline-block;
+      max-width: 100%;
+    }
+    .interactive-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .interactive-image img:hover {
+      transform: scale(1.02);
+    }
+    .interactive-image-caption {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* --- ClientLogo --- */
+    .client-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 80px;
+    }
+    .client-logo img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      border-radius: 8px;
+      filter: grayscale(100%);
+      opacity: 0.7;
+      transition: filter 0.2s, opacity 0.2s;
+      margin: 0;
+    }
+    .client-logo:hover img {
+      filter: grayscale(0%);
+      opacity: 1;
+    }
+    .client-logo-name {
+      font-size: 0.7rem;
+      color: #64748b;
+      text-align: center;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .client-logo-fallback {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    /* --- Collapsible (details/summary) --- */
+    .collapsible {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin: 1em 0;
+      overflow: hidden;
+    }
+    .collapsible summary {
+      padding: 12px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #f8fafc;
+      color: #334155;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .collapsible summary::before {
+      content: '\\25B6';
+      font-size: 0.7em;
+      transition: transform 0.2s;
+    }
+    .collapsible[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .collapsible summary::-webkit-details-marker { display: none; }
+    .collapsible-content {
+      padding: 12px 16px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* --- JSX Card --- */
+    .jsx-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 1em 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .jsx-card-header {
+      padding: 16px 20px 8px;
+    }
+    .jsx-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .jsx-card-content {
+      padding: 8px 20px 16px;
+      color: #475569;
+    }
+
+    /* --- not-prose helper --- */
+    .not-prose { all: initial; display: block; font-family: inherit; color: inherit; }
+    .not-prose * { margin: 0; padding: 0; }
 
     /* --- Footer --- */
     .footer {

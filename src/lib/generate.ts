@@ -152,7 +152,6 @@ Include a section listing all relevant online publications about the leadership 
 - **Logo**: Large and visible (1/4 or 1/3 width), no caption
 - **Tone**: Dynamic, human, compelling — avoid stiff AI-generated feeling
 - **Factual**: All data must be accurate; embed links where appropriate
-- **Media Contact**: Kevin Lourd, PressBeat PR, kevin@pressbeat.io
 
 ---
 
