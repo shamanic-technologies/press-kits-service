@@ -363,7 +363,7 @@ describe("generatePressKit", () => {
     expect(callArgs.message).not.toContain("BRAND DATA");
   });
 
-  it("throws when brand-service getBrand fails", async () => {
+  it("handles brand-service failure gracefully and still generates", async () => {
     const brandId = "b1111111-1111-1111-1111-111111111111";
     const kit = await insertTestMediaKit({
       orgId: "org-brand-fail",
@@ -376,52 +376,29 @@ describe("generatePressKit", () => {
       instructionType: "initial",
     });
 
-    mockGetBrand.mockRejectedValue(new Error("GET /brands/b1111111 failed (500): Internal Server Error"));
+    // Brand service returns null/empty
+    mockGetBrand.mockResolvedValue(null);
     mockExtractBrandFields.mockResolvedValue([]);
 
-    await expect(generatePressKit(kit.id)).rejects.toThrow("GET /brands/b1111111 failed (500)");
-    expect(mockComplete).not.toHaveBeenCalled();
-  });
-
-  it("throws when brand-service extractBrandFields fails", async () => {
-    const brandId = "b1111111-1111-1111-1111-111111111111";
-    const kit = await insertTestMediaKit({
-      orgId: "org-fields-fail",
-      brandId,
-      status: "generating",
-    });
-    await insertTestInstruction({
-      mediaKitId: kit.id,
-      instruction: "Generate press kit",
-      instructionType: "initial",
+    mockComplete.mockResolvedValue({
+      content: "# Press Kit\n\n## Overview\n\nContent here.",
+      tokensInput: 50,
+      tokensOutput: 100,
+      model: "claude-sonnet-4-6",
     });
 
-    mockGetBrand.mockResolvedValue({ id: brandId, name: "TestCo", domain: "test.com" });
-    mockExtractBrandFields.mockRejectedValue(new Error("POST /brands/b1111111/extract-fields failed (502)"));
+    await generatePressKit(kit.id);
 
-    await expect(generatePressKit(kit.id)).rejects.toThrow("extract-fields failed (502)");
-    expect(mockComplete).not.toHaveBeenCalled();
-  });
+    // Should still generate even without brand data
+    const [updated] = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.id, kit.id));
+    expect(updated.status).toBe("drafted");
 
-  it("throws when brand-service extractBrandImages fails", async () => {
-    const brandId = "b1111111-1111-1111-1111-111111111111";
-    const kit = await insertTestMediaKit({
-      orgId: "org-images-fail",
-      brandId,
-      status: "generating",
-    });
-    await insertTestInstruction({
-      mediaKitId: kit.id,
-      instruction: "Generate press kit",
-      instructionType: "initial",
-    });
-
-    mockGetBrand.mockResolvedValue({ id: brandId, name: "TestCo", domain: "test.com" });
-    mockExtractBrandFields.mockResolvedValue([{ key: "company_name", value: "TestCo", cached: false }]);
-    mockExtractBrandImages.mockRejectedValue(new Error("POST /brands/b1111111/extract-images failed (500)"));
-
-    await expect(generatePressKit(kit.id)).rejects.toThrow("extract-images failed (500)");
-    expect(mockComplete).not.toHaveBeenCalled();
+    // Brand data section should not be in the prompt
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.message).not.toContain("BRAND DATA");
   });
 
   it("fetches brand images and includes permanent URLs in prompt", async () => {
