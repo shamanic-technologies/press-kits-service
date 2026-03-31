@@ -92,6 +92,13 @@
       "when": 1775505600000,
       "tag": "0012_add_brand_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1775592000000,
+      "tag": "0013_multi_brand",
+      "breakpoints": true
     }
   ]
 }

@@ -117,8 +117,8 @@ describe("Cost Stats", () => {
     });
 
     it("filters by brandId", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-1" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-2" });
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-1"] });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-2"] });
 
       await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-b1", runType: "generation" });
       await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-b2", runType: "generation" });
@@ -243,8 +243,8 @@ describe("Cost Stats", () => {
     });
 
     it("groups costs by brandId", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-x" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-y" });
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-x"] });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-y"] });
 
       await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-bx", runType: "generation" });
       await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-by", runType: "generation" });

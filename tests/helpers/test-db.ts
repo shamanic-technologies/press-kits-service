@@ -16,7 +16,7 @@ export async function insertTestMediaKit(
     .insert(mediaKits)
     .values({
       orgId: data.orgId,
-      brandId: data.brandId ?? null,
+      brandIds: data.brandIds ?? [],
       campaignId: data.campaignId ?? null,
       featureSlug: data.featureSlug ?? null,
       workflowSlug: data.workflowSlug ?? null,

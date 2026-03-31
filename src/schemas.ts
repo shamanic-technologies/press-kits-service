@@ -24,7 +24,7 @@ const requiredHeaders = z.object({
 });
 
 const optionalContextHeaders = z.object({
-  "x-brand-id": z.string().optional().openapi({ description: "Brand UUID — scopes kit to a specific brand" }),
+  "x-brand-id": z.string().optional().openapi({ description: "Brand UUID(s) — comma-separated list of brand UUIDs for multi-brand campaigns", example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5,b7c6gebe-c42e-5gb3-c45c-2ded5dc32df6" }),
   "x-campaign-id": z.string().optional().openapi({ description: "Campaign UUID — scopes kit to a specific campaign" }),
   "x-feature-slug": z.string().optional().openapi({ description: "Feature slug (e.g. 'press-kit-v2')" }),
   "x-workflow-slug": z.string().optional().openapi({ description: "Workflow slug override for generation" }),
@@ -38,7 +38,7 @@ export const MediaKitResponseSchema = z
   .object({
     id: z.string().uuid().openapi({ example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
     orgId: z.string().openapi({ example: "org_3ANNRtJtvq2vahygqOSJ7IjRfp1" }),
-    brandId: z.string().nullable().openapi({ example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5" }),
+    brandIds: z.array(z.string()).openapi({ example: ["a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"] }),
     campaignId: z.string().nullable().openapi({ example: "c7d8e9f0-a1b2-3456-cdef-789012345678" }),
     featureSlug: z.string().nullable().openapi({ example: "press-kit-v2" }),
     workflowSlug: z.string().nullable().openapi({ example: "generate-press-kit" }),
@@ -278,7 +278,7 @@ registry.registerPath({
       org_id: z.string().optional().openapi({ description: "Filter by org UUID. At least one of org_id, campaign_id, or brand_id is required.", example: "org_3ANNRtJtvq2vahygqOSJ7IjRfp1" }),
       title: z.string().optional().openapi({ description: "Case-insensitive title search (partial match)", example: "Q1 2026" }),
       campaign_id: z.string().optional().openapi({ description: "Filter by campaign UUID", example: "c7d8e9f0-a1b2-3456-cdef-789012345678" }),
-      brand_id: z.string().optional().openapi({ description: "Filter by brand UUID", example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5" }),
+      brand_id: z.string().optional().openapi({ description: "Filter by brand UUID (finds kits that include this brand)", example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5" }),
     }),
   },
   responses: {

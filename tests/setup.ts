@@ -65,4 +65,8 @@ beforeAll(async () => {
   await sql`ALTER TABLE media_kits DROP COLUMN IF EXISTS workflow_dynasty_slug`;
   // Add brand_domain column for logo.dev resolution
   await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS brand_domain text`;
+  // Migrate brand_id → brand_ids array
+  await sql`ALTER TABLE media_kits ADD COLUMN IF NOT EXISTS brand_ids VARCHAR[] NOT NULL DEFAULT '{}'`;
+  await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='media_kits' AND column_name='brand_id') THEN UPDATE media_kits SET brand_ids = ARRAY[brand_id] WHERE brand_id IS NOT NULL; ALTER TABLE media_kits DROP COLUMN brand_id; END IF; END $$`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_media_kits_brand_ids ON media_kits USING GIN (brand_ids)`;
 });

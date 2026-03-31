@@ -197,7 +197,7 @@ interface GenerationData {
     orgId: string;
     title: string | null;
     mdxPageContent: string | null;
-    brandId: string | null;
+    brandIds: string[];
     campaignId: string | null;
   };
   instructions: { instruction: string; instructionType: string }[];
@@ -239,7 +239,7 @@ async function fetchGenerationData(mediaKitId: string): Promise<GenerationData |
       orgId: kit.orgId,
       title: kit.title,
       mdxPageContent: kit.mdxPageContent,
-      brandId: kit.brandId,
+      brandIds: kit.brandIds,
       campaignId: kit.campaignId,
     },
     instructions: instructions.map((i) => ({
@@ -259,25 +259,31 @@ function formatFieldValue(value: string | string[] | Record<string, unknown> | n
   return JSON.stringify(value, null, 2);
 }
 
-async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise<string | null> {
-  console.log(`[press-kits-service] Fetching brand data for brandId=${brandId}`);
+async function fetchBrandContext(brandIds: string[], ctx?: ContextHeaders): Promise<string | null> {
+  console.log(`[press-kits-service] Fetching brand data for brandIds=${brandIds.join(",")}`);
 
-  // Fetch basic brand info, extracted fields, and images in parallel
-  const [brand, extractedFields, imageResults] = await Promise.all([
-    getBrand(brandId, ctx),
-    extractBrandFields(brandId, PRESS_KIT_FIELDS, ctx),
-    extractBrandImages(brandId, PRESS_KIT_IMAGE_CATEGORIES, ctx),
+  // Fetch basic brand info and images per-brand, but extracted fields use the new
+  // headerless endpoint that reads all brand IDs from x-brand-id at once.
+  const [brands, extractedFields, imageResultsPerBrand] = await Promise.all([
+    Promise.all(brandIds.map((id) => getBrand(id, ctx))),
+    extractBrandFields(PRESS_KIT_FIELDS, ctx),
+    Promise.all(brandIds.map((id) => extractBrandImages(id, PRESS_KIT_IMAGE_CATEGORIES, ctx))),
   ]);
 
-  if (!brand && extractedFields.length === 0 && imageResults.length === 0) {
-    console.warn(`[press-kits-service] No brand data found for brandId=${brandId}`);
+  const validBrands = brands.filter((b): b is NonNullable<typeof b> => b !== null);
+  const allImages = imageResultsPerBrand.flat();
+  const totalImages = allImages.reduce((sum, r) => sum + r.images.length, 0);
+
+  if (validBrands.length === 0 && extractedFields.length === 0 && totalImages === 0) {
+    console.warn(`[press-kits-service] No brand data found for brandIds=${brandIds.join(",")}`);
     return null;
   }
 
   const parts: string[] = ["--- BRAND DATA (use this to write the press kit) ---"];
 
-  // Basic brand info from brand-service
-  if (brand) {
+  // Basic brand info from brand-service (one section per brand)
+  for (const brand of validBrands) {
+    parts.push(`\n--- Brand: ${brand.name ?? brand.id} ---`);
     if (brand.name) parts.push(`Brand Name: ${brand.name}`);
     if (brand.domain) parts.push(`Domain: ${brand.domain}`);
     if (brand.brandUrl) parts.push(`Website: ${brand.brandUrl}`);
@@ -290,7 +296,7 @@ async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise
     parts.push("");
   }
 
-  // AI-extracted detailed fields
+  // AI-extracted detailed fields (returned by the new multi-brand endpoint)
   if (extractedFields.length > 0) {
     parts.push("--- DETAILED BRAND INFORMATION (AI-extracted from website) ---");
     for (const field of extractedFields) {
@@ -304,10 +310,9 @@ async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise
   }
 
   // Brand images with permanent URLs
-  const totalImages = imageResults.reduce((sum, r) => sum + r.images.length, 0);
   if (totalImages > 0) {
     parts.push("--- BRAND IMAGES (use these permanent URLs in the press kit) ---");
-    for (const result of imageResults) {
+    for (const result of allImages) {
       if (result.images.length === 0) continue;
       parts.push(`\nCategory: ${result.category}`);
       for (const img of result.images) {
@@ -323,7 +328,7 @@ async function fetchBrandContext(brandId: string, ctx?: ContextHeaders): Promise
 
   parts.push("--- END BRAND DATA ---");
 
-  console.log(`[press-kits-service] Brand data fetched: ${brand ? "basic info ✓" : "basic info ✗"}, ${extractedFields.filter((f) => f.value !== null).length}/${extractedFields.length} fields extracted, ${totalImages} images`);
+  console.log(`[press-kits-service] Brand data fetched: ${validBrands.length}/${brandIds.length} brands, ${extractedFields.filter((f) => f.value !== null).length}/${extractedFields.length} fields extracted, ${totalImages} images`);
 
   return parts.join("\n");
 }
@@ -395,21 +400,21 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
 
   console.log(`[press-kits-service] Starting generation for kit ${mediaKitId}`);
 
-  // Fetch brand context if brandId is available
+  // Fetch brand context if brandIds are available
   let brandContext: string | null = null;
-  if (data.currentKit.brandId) {
-    brandContext = await fetchBrandContext(data.currentKit.brandId, ctx);
+  if (data.currentKit.brandIds.length > 0) {
+    brandContext = await fetchBrandContext(data.currentKit.brandIds, ctx);
   } else {
-    console.warn(`[press-kits-service] No brandId on kit ${mediaKitId} — generating without brand data`);
+    console.warn(`[press-kits-service] No brandIds on kit ${mediaKitId} — generating without brand data`);
   }
 
   const message = buildMessage(data, brandContext);
 
-  // Resolve brand domain and logo URL from brand-service
+  // Resolve brand domain and logo URL from brand-service (use first brand for kit metadata)
   let brandDomain: string | null = null;
   let logoUrl: string | null = null;
-  if (data.currentKit.brandId) {
-    const brand = await getBrand(data.currentKit.brandId, ctx);
+  if (data.currentKit.brandIds.length > 0) {
+    const brand = await getBrand(data.currentKit.brandIds[0], ctx);
     if (brand) {
       brandDomain = brand.domain;
       logoUrl = brand.logoUrl;

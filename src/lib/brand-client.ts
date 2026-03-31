@@ -65,9 +65,8 @@ export async function getBrand(brandId: string, ctx?: ContextHeaders): Promise<B
   return data.brand;
 }
 
-/** Extract detailed fields from a brand via AI (cached 30 days). */
+/** Extract detailed fields from brands via AI (cached 30 days). Reads x-brand-id from forwarded headers. */
 export async function extractBrandFields(
-  brandId: string,
   fields: { key: string; description: string }[],
   ctx?: ContextHeaders,
 ): Promise<ExtractedField[]> {
@@ -77,7 +76,7 @@ export async function extractBrandFields(
   };
   if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
 
-  const response = await fetch(`${BRAND_SERVICE_URL}/brands/${brandId}/extract-fields`, {
+  const response = await fetch(`${BRAND_SERVICE_URL}/brands/extract-fields`, {
     method: "POST",
     headers,
     body: JSON.stringify({ fields }),
@@ -85,7 +84,7 @@ export async function extractBrandFields(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[press-kits-service] POST /brands/${brandId}/extract-fields failed (${response.status}): ${text}`);
+    console.error(`[press-kits-service] POST /brands/extract-fields failed (${response.status}): ${text}`);
     return [];
   }
 
