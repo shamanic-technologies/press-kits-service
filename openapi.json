@@ -53,10 +53,14 @@
             "type": "string",
             "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
           },
-          "brandId": {
-            "type": "string",
-            "nullable": true,
-            "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
+            ]
           },
           "campaignId": {
             "type": "string",
@@ -136,7 +140,7 @@
         "required": [
           "id",
           "orgId",
-          "brandId",
+          "brandIds",
           "campaignId",
           "featureSlug",
           "workflowSlug",
@@ -191,10 +195,14 @@
             "type": "string",
             "example": "org_3ANNRtJtvq2vahygqOSJ7IjRfp1"
           },
-          "brandId": {
-            "type": "string",
-            "nullable": true,
-            "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
+            ]
           },
           "campaignId": {
             "type": "string",
@@ -274,7 +282,7 @@
         "required": [
           "id",
           "orgId",
-          "brandId",
+          "brandIds",
           "campaignId",
           "featureSlug",
           "workflowSlug",
@@ -697,7 +705,7 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand UUID",
+              "description": "Filter by brand UUID (finds kits that include this brand)",
               "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
             },
             "required": false,
@@ -798,7 +806,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand UUID — scopes kit to a specific brand"
+              "description": "Brand UUID(s) — comma-separated list of brand UUIDs for multi-brand campaigns",
+              "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5,b7c6gebe-c42e-5gb3-c45c-2ded5dc32df6"
             },
             "required": false,
             "name": "x-brand-id",

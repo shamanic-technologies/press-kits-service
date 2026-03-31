@@ -7,7 +7,7 @@ declare global {
       userId: string;
       runId: string;
       workflowSlug?: string;
-      brandId?: string;
+      brandIds: string[];
       campaignId?: string;
       featureSlug?: string;
       featureDynastySlug?: string;
@@ -37,7 +37,7 @@ export function requireIdentityHeaders(req: Request, res: Response, next: NextFu
   req.userId = userId;
   req.runId = runId;
   req.workflowSlug = req.headers["x-workflow-slug"] as string | undefined;
-  req.brandId = req.headers["x-brand-id"] as string | undefined;
+  req.brandIds = String(req.headers["x-brand-id"] ?? "").split(",").map(s => s.trim()).filter(Boolean).sort();
   req.campaignId = req.headers["x-campaign-id"] as string | undefined;
   req.featureSlug = req.headers["x-feature-slug"] as string | undefined;
   req.featureDynastySlug = req.headers["x-feature-dynasty-slug"] as string | undefined;
@@ -50,7 +50,7 @@ export interface ContextHeaders {
   userId: string;
   runId: string;
   workflowSlug?: string;
-  brandId?: string;
+  brandIds: string[];
   campaignId?: string;
   featureSlug?: string;
   featureDynastySlug?: string;
@@ -63,7 +63,7 @@ export function getContextHeaders(req: Request): ContextHeaders {
     userId: req.userId,
     runId: req.runId,
     workflowSlug: req.workflowSlug,
-    brandId: req.brandId,
+    brandIds: req.brandIds,
     campaignId: req.campaignId,
     featureSlug: req.featureSlug,
     featureDynastySlug: req.featureDynastySlug,
@@ -78,7 +78,7 @@ export function buildForwardHeaders(ctx: ContextHeaders): Record<string, string>
     "x-run-id": ctx.runId,
   };
   if (ctx.workflowSlug) headers["x-workflow-slug"] = ctx.workflowSlug;
-  if (ctx.brandId) headers["x-brand-id"] = ctx.brandId;
+  if (ctx.brandIds.length > 0) headers["x-brand-id"] = ctx.brandIds.join(",");
   if (ctx.campaignId) headers["x-campaign-id"] = ctx.campaignId;
   if (ctx.featureSlug) headers["x-feature-slug"] = ctx.featureSlug;
   if (ctx.featureDynastySlug) headers["x-feature-dynasty-slug"] = ctx.featureDynastySlug;

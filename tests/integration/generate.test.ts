@@ -176,7 +176,7 @@ describe("generatePressKit", () => {
     const brandId = "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5";
     const kit = await insertTestMediaKit({
       orgId: "org-brand",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({
@@ -219,7 +219,6 @@ describe("generatePressKit", () => {
     // Verify brand-service was called
     expect(mockGetBrand).toHaveBeenCalledWith(brandId, undefined);
     expect(mockExtractBrandFields).toHaveBeenCalledWith(
-      brandId,
       expect.arrayContaining([
         expect.objectContaining({ key: "company_name" }),
         expect.objectContaining({ key: "leadership_team" }),
@@ -253,7 +252,7 @@ describe("generatePressKit", () => {
     const brandId = "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5";
     const kit = await insertTestMediaKit({
       orgId: "org-logo",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({
@@ -296,7 +295,7 @@ describe("generatePressKit", () => {
     const brandId = "b2222222-2222-2222-2222-222222222222";
     const kit = await insertTestMediaKit({
       orgId: "org-nologo",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({
@@ -336,7 +335,7 @@ describe("generatePressKit", () => {
     expect(updated.iconUrl).toBeNull();
   });
 
-  it("skips brand fetch when no brandId and still generates", async () => {
+  it("skips brand fetch when no brandIds and still generates", async () => {
     const kit = await insertTestMediaKit({
       orgId: "org-no-brand",
       status: "generating",
@@ -367,7 +366,7 @@ describe("generatePressKit", () => {
     const brandId = "b1111111-1111-1111-1111-111111111111";
     const kit = await insertTestMediaKit({
       orgId: "org-brand-fail",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({
@@ -405,7 +404,7 @@ describe("generatePressKit", () => {
     const brandId = "c2222222-2222-2222-2222-222222222222";
     const kit = await insertTestMediaKit({
       orgId: "org-images",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({
@@ -516,7 +515,7 @@ describe("generatePressKit", () => {
     const brandId = "d3333333-3333-3333-3333-333333333333";
     const kit = await insertTestMediaKit({
       orgId: "org-no-images",
-      brandId,
+      brandIds: [brandId],
       status: "generating",
     });
     await insertTestInstruction({

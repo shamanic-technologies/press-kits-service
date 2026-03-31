@@ -49,14 +49,14 @@ describe("Internal", () => {
     it("filters by brand_id and campaign_id query params", async () => {
       await insertTestMediaKit({
         orgId: "test-org-id",
-        brandId: "brand-1",
+        brandIds: ["brand-1"],
         campaignId: "camp-1",
         title: "Scoped Kit",
         status: "validated",
       });
       await insertTestMediaKit({
         orgId: "test-org-id",
-        brandId: "brand-2",
+        brandIds: ["brand-2"],
         title: "Other Kit",
         status: "validated",
       });

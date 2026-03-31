@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql as drizzleSql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import { UpsertGenerationResultRequestSchema } from "../schemas.js";
@@ -14,7 +14,7 @@ router.get("/internal/media-kits/current", async (req, res) => {
     const campaignId = req.query.campaign_id as string | undefined;
 
     const conditions = [eq(mediaKits.orgId, orgId)];
-    if (brandId) conditions.push(eq(mediaKits.brandId, brandId));
+    if (brandId) conditions.push(drizzleSql`${brandId} = ANY(${mediaKits.brandIds})`);
     if (campaignId) conditions.push(eq(mediaKits.campaignId, campaignId));
 
     const kit = await db.query.mediaKits.findFirst({

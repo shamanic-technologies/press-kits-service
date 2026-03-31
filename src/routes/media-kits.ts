@@ -101,7 +101,7 @@ router.get("/media-kits", async (req, res) => {
       conditions.push(eq(mediaKits.campaignId, campaignIdFilter));
     }
     if (brandIdFilter) {
-      conditions.push(eq(mediaKits.brandId, brandIdFilter));
+      conditions.push(drizzleSql`${brandIdFilter} = ANY(${mediaKits.brandIds})`);
     }
 
     const results = await db
@@ -200,18 +200,19 @@ router.patch("/media-kits/:id/status", async (req, res) => {
   }
 });
 
-/** Build scope conditions for orgId + optional brandId + campaignId */
-function buildScopeConditions(orgId: string, brandId?: string | null, campaignId?: string | null) {
+/** Build scope conditions for orgId + optional brandIds + campaignId */
+function buildScopeConditions(orgId: string, brandIds?: string[], campaignId?: string | null) {
   const conditions = [eq(mediaKits.orgId, orgId)];
-  if (brandId) {
-    conditions.push(eq(mediaKits.brandId, brandId));
+  if (brandIds && brandIds.length > 0) {
+    const sorted = [...brandIds].sort();
+    conditions.push(eq(mediaKits.brandIds, sorted));
   } else {
-    conditions.push(isNull(mediaKits.brandId));
+    conditions.push(drizzleSql`${mediaKits.brandIds} = '{}'::varchar[]`);
   }
   if (campaignId) {
     conditions.push(eq(mediaKits.campaignId, campaignId));
   } else {
-    conditions.push(isNull(mediaKits.campaignId));
+    conditions.push(drizzleSql`${mediaKits.campaignId} IS NULL`);
   }
   return conditions;
 }
@@ -235,7 +236,7 @@ router.post("/media-kits", async (req, res) => {
       }
     } else {
       // Find latest active kit scoped by org + brand + campaign
-      const scopeConditions = buildScopeConditions(orgId, ctx.brandId, ctx.campaignId);
+      const scopeConditions = buildScopeConditions(orgId, ctx.brandIds, ctx.campaignId);
       currentKit = await db.query.mediaKits.findFirst({
         where: and(
           ...scopeConditions,
@@ -262,7 +263,7 @@ router.post("/media-kits", async (req, res) => {
           orgId,
           status: "generating",
           workflowSlug: ctx.workflowSlug ?? null,
-          brandId: ctx.brandId ?? null,
+          brandIds: ctx.brandIds,
           campaignId: ctx.campaignId ?? null,
           featureSlug: ctx.featureSlug ?? null,
         })
@@ -289,7 +290,7 @@ router.post("/media-kits", async (req, res) => {
           parentMediaKitId: currentKit.id,
           status: "generating",
           workflowSlug: ctx.workflowSlug ?? null,
-          brandId: ctx.brandId ?? currentKit.brandId,
+          brandIds: ctx.brandIds.length > 0 ? ctx.brandIds : currentKit.brandIds,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
         })
@@ -310,7 +311,7 @@ router.post("/media-kits", async (req, res) => {
         .set({
           updatedAt: new Date(),
           workflowSlug: ctx.workflowSlug ?? currentKit.workflowSlug,
-          brandId: ctx.brandId ?? currentKit.brandId,
+          brandIds: ctx.brandIds.length > 0 ? ctx.brandIds : currentKit.brandIds,
           campaignId: ctx.campaignId ?? currentKit.campaignId,
           featureSlug: ctx.featureSlug ?? currentKit.featureSlug,
         })

@@ -73,27 +73,38 @@ describe("Media Kits", () => {
     });
 
     it("filters by brand_id", async () => {
-      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandId: "brand-aaa" });
-      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandId: "brand-bbb" });
+      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandIds: ["brand-aaa"] });
+      await insertTestMediaKit({ orgId: "org_b", status: "validated", brandIds: ["brand-bbb"] });
 
       const res = await request(app).get("/media-kits?brand_id=brand-aaa").set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.mediaKits).toHaveLength(1);
-      expect(res.body.mediaKits[0].brandId).toBe("brand-aaa");
+      expect(res.body.mediaKits[0].brandIds[0]).toBe("brand-aaa");
     });
 
     it("combines brand_id with org_id filter", async () => {
-      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandId: "brand-x" });
-      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandId: "brand-y" });
-      await insertTestMediaKit({ orgId: "org_other", status: "validated", brandId: "brand-x" });
+      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandIds: ["brand-x"] });
+      await insertTestMediaKit({ orgId: "org_combo", status: "validated", brandIds: ["brand-y"] });
+      await insertTestMediaKit({ orgId: "org_other", status: "validated", brandIds: ["brand-x"] });
 
       const res = await request(app).get("/media-kits?org_id=org_combo&brand_id=brand-x").set(headers);
 
       expect(res.status).toBe(200);
       expect(res.body.mediaKits).toHaveLength(1);
       expect(res.body.mediaKits[0].orgId).toBe("org_combo");
-      expect(res.body.mediaKits[0].brandId).toBe("brand-x");
+      expect(res.body.mediaKits[0].brandIds[0]).toBe("brand-x");
+    });
+
+    it("filters multi-brand kits by single brand_id (ANY match)", async () => {
+      await insertTestMediaKit({ orgId: "org_multi", status: "validated", brandIds: ["brand-aaa", "brand-bbb"] });
+      await insertTestMediaKit({ orgId: "org_multi", status: "validated", brandIds: ["brand-ccc"] });
+
+      const res = await request(app).get("/media-kits?brand_id=brand-bbb").set(headers);
+
+      expect(res.status).toBe(200);
+      expect(res.body.mediaKits).toHaveLength(1);
+      expect(res.body.mediaKits[0].brandIds).toEqual(["brand-aaa", "brand-bbb"]);
     });
 
     it("requires at least one filter", async () => {
@@ -302,7 +313,7 @@ describe("Media Kits", () => {
       // Kit in brand-1/camp-1
       await insertTestMediaKit({
         orgId: "test-org-id",
-        brandId: "brand-1",
+        brandIds: ["brand-1"],
         campaignId: "camp-1",
         status: "validated",
         title: "Brand 1 Kit",
@@ -310,7 +321,7 @@ describe("Media Kits", () => {
       // Kit in brand-2/camp-2
       await insertTestMediaKit({
         orgId: "test-org-id",
-        brandId: "brand-2",
+        brandIds: ["brand-2"],
         campaignId: "camp-2",
         status: "validated",
         title: "Brand 2 Kit",
@@ -328,7 +339,7 @@ describe("Media Kits", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("generating");
-      expect(res.body.brandId).toBe("brand-1");
+      expect(res.body.brandIds).toEqual(["brand-1"]);
       expect(res.body.campaignId).toBe("camp-1");
       expect(res.body.mdxPageContent).toBeNull(); // new kit created from "validated" copies content
       // Actually with the scope fix, it should find Brand 1 Kit and copy from it
@@ -338,7 +349,7 @@ describe("Media Kits", () => {
       // Existing kit in different scope
       await insertTestMediaKit({
         orgId: "test-org-id",
-        brandId: "brand-1",
+        brandIds: ["brand-1"],
         campaignId: "camp-1",
         status: "validated",
       });
@@ -356,8 +367,43 @@ describe("Media Kits", () => {
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("generating");
       expect(res.body.parentMediaKitId).toBeNull();
-      expect(res.body.brandId).toBe("brand-new");
+      expect(res.body.brandIds).toEqual(["brand-new"]);
       expect(res.body.campaignId).toBe("camp-new");
+    });
+
+    it("parses comma-separated x-brand-id header into sorted brandIds array", async () => {
+      const res = await request(app)
+        .post("/media-kits")
+        .set({
+          ...headers,
+          "x-brand-id": "brand-c,brand-a,brand-b",
+        })
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.brandIds).toEqual(["brand-a", "brand-b", "brand-c"]);
+    });
+
+    it("scopes multi-brand kit separately from single-brand kit", async () => {
+      await insertTestMediaKit({
+        orgId: "test-org-id",
+        brandIds: ["brand-a"],
+        status: "validated",
+        title: "Single Brand Kit",
+      });
+
+      // Multi-brand scope should NOT find the single-brand kit
+      const res = await request(app)
+        .post("/media-kits")
+        .set({
+          ...headers,
+          "x-brand-id": "brand-a,brand-b",
+        })
+        .send({ instruction: "Multi-brand kit" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.parentMediaKitId).toBeNull();
+      expect(res.body.brandIds).toEqual(["brand-a", "brand-b"]);
     });
 
     it("stores context headers on new kit", async () => {
@@ -374,7 +420,7 @@ describe("Media Kits", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.featureSlug).toBe("press-kit-v2");
-      expect(res.body.brandId).toBe("brand-123");
+      expect(res.body.brandIds).toEqual(["brand-123"]);
       expect(res.body.campaignId).toBe("camp-789");
     });
 

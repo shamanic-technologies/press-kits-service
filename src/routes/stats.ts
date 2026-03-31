@@ -22,8 +22,8 @@ const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> =
     groupBy: "DATE(mkv.viewed_at AT TIME ZONE 'UTC')",
   },
   brandId: {
-    select: "mk.brand_id",
-    groupBy: "mk.brand_id",
+    select: "unnest(mk.brand_ids)",
+    groupBy: "unnest(mk.brand_ids)",
   },
   campaignId: {
     select: "mk.campaign_id",
@@ -169,7 +169,7 @@ router.get("/media-kits/stats/views", async (req, res) => {
     let idx = 2;
 
     if (q.brandId) {
-      conditions.push(`mk.brand_id = $${idx++}`);
+      conditions.push(`$${idx++} = ANY(mk.brand_ids)`);
       params.push(q.brandId);
     }
     if (q.campaignId) {
@@ -314,7 +314,7 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       params.push(q.mediaKitId);
     }
     if (q.brandId) {
-      conditions.push(`mk.brand_id = $${idx++}`);
+      conditions.push(`$${idx++} = ANY(mk.brand_ids)`);
       params.push(q.brandId);
     }
     if (q.campaignId) {
@@ -340,7 +340,7 @@ router.get("/media-kits/stats/costs", async (req, res) => {
 
     const COST_GROUP_BY_COLUMN: Record<string, string> = {
       mediaKitId: "media_kit_id",
-      brandId: "brand_id",
+      brandId: "brand_ids",
       campaignId: "campaign_id",
       featureSlug: "feature_slug",
       workflowSlug: "workflow_slug",
@@ -357,7 +357,9 @@ router.get("/media-kits/stats/costs", async (req, res) => {
     const groupBySelectExpr = groupByColumn
       ? groupByColumn === "media_kit_id"
         ? "mkr.media_kit_id"
-        : `mk.${groupByColumn}`
+        : groupByColumn === "brand_ids"
+          ? "unnest(mk.brand_ids)"
+          : `mk.${groupByColumn}`
       : undefined;
 
     const selectFields = groupBySelectExpr

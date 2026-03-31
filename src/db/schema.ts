@@ -28,7 +28,7 @@ export const mediaKits = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     orgId: varchar("org_id").notNull(),
-    brandId: varchar("brand_id"),
+    brandIds: varchar("brand_ids").array().notNull().default([]),
     campaignId: varchar("campaign_id"),
     featureSlug: varchar("feature_slug"),
     workflowSlug: varchar("workflow_slug"),

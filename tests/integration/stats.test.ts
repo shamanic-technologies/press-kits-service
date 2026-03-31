@@ -138,8 +138,8 @@ describe("Stats", () => {
     });
 
     it("filters by brandId", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-1" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-2" });
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-1"] });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-2"] });
 
       await insertTestView({ mediaKitId: kit1.id, country: "US" });
       await insertTestView({ mediaKitId: kit2.id, country: "US" });
@@ -242,8 +242,8 @@ describe("Stats", () => {
     });
 
     it("returns grouped stats by brandId", async () => {
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-a" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandId: "brand-b" });
+      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-a"] });
+      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", brandIds: ["brand-b"] });
 
       await insertTestView({ mediaKitId: kit1.id, country: "US" });
       await insertTestView({ mediaKitId: kit2.id, country: "US" });
