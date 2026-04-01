@@ -478,9 +478,8 @@ describe("generatePressKit", () => {
 
     await generatePressKit(kit.id);
 
-    // Verify extract-images was called with the right categories
+    // Verify extract-images was called with the right categories (headerless multi-brand endpoint)
     expect(mockExtractBrandImages).toHaveBeenCalledWith(
-      brandId,
       expect.arrayContaining([
         expect.objectContaining({ key: "logo", maxCount: 2 }),
         expect.objectContaining({ key: "product", maxCount: 5 }),

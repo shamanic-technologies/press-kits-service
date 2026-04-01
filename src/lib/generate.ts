@@ -262,17 +262,16 @@ function formatFieldValue(value: string | string[] | Record<string, unknown> | n
 async function fetchBrandContext(brandIds: string[], ctx?: ContextHeaders): Promise<string | null> {
   console.log(`[press-kits-service] Fetching brand data for brandIds=${brandIds.join(",")}`);
 
-  // Fetch basic brand info and images per-brand, but extracted fields use the new
-  // headerless endpoint that reads all brand IDs from x-brand-id at once.
-  const [brands, extractedFields, imageResultsPerBrand] = await Promise.all([
+  // Fetch basic brand info, extracted fields, and images — all use the headerless
+  // multi-brand endpoints that read brand IDs from x-brand-id at once.
+  const [brands, extractedFields, imageResults] = await Promise.all([
     Promise.all(brandIds.map((id) => getBrand(id, ctx))),
     extractBrandFields(PRESS_KIT_FIELDS, ctx),
-    Promise.all(brandIds.map((id) => extractBrandImages(id, PRESS_KIT_IMAGE_CATEGORIES, ctx))),
+    extractBrandImages(PRESS_KIT_IMAGE_CATEGORIES, ctx),
   ]);
 
   const validBrands = brands.filter((b): b is NonNullable<typeof b> => b !== null);
-  const allImages = imageResultsPerBrand.flat();
-  const totalImages = allImages.reduce((sum, r) => sum + r.images.length, 0);
+  const totalImages = imageResults.reduce((sum, r) => sum + r.images.length, 0);
 
   if (validBrands.length === 0 && extractedFields.length === 0 && totalImages === 0) {
     console.warn(`[press-kits-service] No brand data found for brandIds=${brandIds.join(",")}`);
@@ -312,7 +311,7 @@ async function fetchBrandContext(brandIds: string[], ctx?: ContextHeaders): Prom
   // Brand images with permanent URLs
   if (totalImages > 0) {
     parts.push("--- BRAND IMAGES (use these permanent URLs in the press kit) ---");
-    for (const result of allImages) {
+    for (const result of imageResults) {
       if (result.images.length === 0) continue;
       parts.push(`\nCategory: ${result.category}`);
       for (const img of result.images) {
