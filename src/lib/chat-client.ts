@@ -15,6 +15,8 @@ export async function complete(
   params: {
     message: string;
     systemPrompt: string;
+    provider: string;
+    model: string;
     maxTokens?: number;
     temperature?: number;
   },

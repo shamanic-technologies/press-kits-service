@@ -424,6 +424,8 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
     {
       message,
       systemPrompt: buildSystemPrompt(),
+      provider: "google",
+      model: "pro",
       maxTokens: 8192,
     },
     ctx,
