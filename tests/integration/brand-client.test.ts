@@ -48,7 +48,7 @@ describe("extractBrandImages", () => {
     expect(results[0].images).toHaveLength(1);
   });
 
-  it("throws when brand-service returns results with missing images array (502 upload failure)", async () => {
+  it("normalizes missing images array to empty array instead of crashing", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -59,20 +59,20 @@ describe("extractBrandImages", () => {
       }),
     });
 
-    await expect(
-      extractBrandImages([{ key: "brand", description: "Brand images", maxCount: 5 }]),
-    ).rejects.toThrow('category "brand" missing images array');
+    const results = await extractBrandImages([{ key: "brand", description: "Brand images", maxCount: 5 }]);
+    expect(results).toHaveLength(1);
+    expect(results[0].category).toBe("brand");
+    expect(results[0].images).toEqual([]);
   });
 
-  it("throws when brand-service returns no results array at all", async () => {
+  it("returns empty array when brand-service returns no results array at all", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ brands: [] }),
     });
 
-    await expect(
-      extractBrandImages([{ key: "brand", description: "Brand images", maxCount: 5 }]),
-    ).rejects.toThrow("missing results array");
+    const results = await extractBrandImages([{ key: "brand", description: "Brand images", maxCount: 5 }]);
+    expect(results).toEqual([]);
   });
 
   it("returns empty array when brand-service responds with non-ok status", async () => {
