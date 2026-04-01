@@ -89,6 +89,10 @@ export async function extractBrandFields(
   }
 
   const data = (await response.json()) as { results: ExtractedField[] };
+  if (!Array.isArray(data.results)) {
+    console.error(`[press-kits-service] POST /brands/extract-fields returned unexpected shape: missing results array`);
+    throw new Error("brand-service /brands/extract-fields returned unexpected response: missing results array");
+  }
   return data.results;
 }
 
@@ -116,5 +120,16 @@ export async function extractBrandImages(
   }
 
   const data = (await response.json()) as { brands: unknown[]; results: ExtractImagesResult[] };
+  if (!Array.isArray(data.results)) {
+    console.error(`[press-kits-service] POST /brands/extract-images returned unexpected shape: missing results array`);
+    throw new Error("brand-service /brands/extract-images returned unexpected response: missing results array");
+  }
+  // Guard against individual results missing their images array (e.g. when image upload fails upstream)
+  for (const result of data.results) {
+    if (!Array.isArray(result.images)) {
+      console.error(`[press-kits-service] extract-images result for category "${result.category}" missing images array`);
+      throw new Error(`brand-service extract-images: category "${result.category}" missing images array`);
+    }
+  }
   return data.results;
 }
