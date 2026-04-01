@@ -71,6 +71,10 @@ describe("generatePressKit", () => {
     expect(updated.status).toBe("drafted");
     expect(updated.title).toBe("Acme Corp Press Kit");
     expect(updated.mdxPageContent).toContain("## Overview");
+
+    const callArgs = mockComplete.mock.calls[0][0];
+    expect(callArgs.provider).toBe("google");
+    expect(callArgs.model).toBe("pro");
   });
 
   it("does nothing when kit is not in generating status", async () => {
