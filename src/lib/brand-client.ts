@@ -92,9 +92,8 @@ export async function extractBrandFields(
   return data.results;
 }
 
-/** Extract brand images by category via AI, with permanent R2 URLs. */
+/** Extract brand images by category via AI, with permanent R2 URLs. Reads brand IDs from x-brand-id header. */
 export async function extractBrandImages(
-  brandId: string,
   categories: ImageCategory[],
   ctx?: ContextHeaders,
 ): Promise<ExtractImagesResult[]> {
@@ -104,7 +103,7 @@ export async function extractBrandImages(
   };
   if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
 
-  const response = await fetch(`${BRAND_SERVICE_URL}/brands/${brandId}/extract-images`, {
+  const response = await fetch(`${BRAND_SERVICE_URL}/brands/extract-images`, {
     method: "POST",
     headers,
     body: JSON.stringify({ categories }),
@@ -112,10 +111,10 @@ export async function extractBrandImages(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[press-kits-service] POST /brands/${brandId}/extract-images failed (${response.status}): ${text}`);
+    console.error(`[press-kits-service] POST /brands/extract-images failed (${response.status}): ${text}`);
     return [];
   }
 
-  const data = (await response.json()) as { brandId: string; results: ExtractImagesResult[] };
+  const data = (await response.json()) as { brands: unknown[]; results: ExtractImagesResult[] };
   return data.results;
 }
