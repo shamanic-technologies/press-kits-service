@@ -17,10 +17,23 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+const DISCLAIMER_FOOTER = `<footer style="max-width:720px;margin:48px auto 0;padding:32px 24px 48px;border-top:1px solid #e2e8f0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <p style="font-size:0.7rem;line-height:1.6;color:#94a3b8;margin:0">
+    <strong style="color:#64748b">Disclaimer</strong> &mdash;
+    This press kit was prepared by Distribute.io on behalf of the featured organization, using AI-assisted research based on publicly available information.
+    It reflects our best-effort understanding of the brand and its offerings but may contain inaccuracies or omissions.
+    This material is provided for media background and reference purposes only and should not be quoted or published without independent verification.
+    For official statements, please contact the organization directly.
+    This document is confidential and intended solely for the designated recipient.
+  </p>
+  <p style="font-size:0.65rem;color:#cbd5e1;margin:8px 0 0;text-align:center">Powered by Distribute.io</p>
+</footer>`;
+
 /**
  * Injects server-side elements into the LLM-generated HTML:
  * - Favicon link tag (from kit.iconUrl)
  * - Logo.dev API token into img.logo.dev URLs
+ * - Legal disclaimer footer (always present, hard-coded)
  */
 function injectServerSideElements(
   html: string,
@@ -45,6 +58,9 @@ function injectServerSideElements(
       },
     );
   }
+
+  // Inject disclaimer footer before </body>
+  result = result.replace(/<\/body>/i, `${DISCLAIMER_FOOTER}\n</body>`);
 
   return result;
 }

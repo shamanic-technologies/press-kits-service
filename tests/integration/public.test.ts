@@ -199,6 +199,34 @@ describe("Public", () => {
       expect(res.headers["content-type"]).toMatch(/text\/html/);
     });
 
+    it("injects disclaimer footer before </body>", async () => {
+      const content = htmlPage({ body: "<h1>Test</h1>" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_disclaimer",
+        title: "Disclaimer Kit",
+        mdxPageContent: content,
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("Disclaimer");
+      expect(res.text).toContain("Distribute.io");
+      expect(res.text).toContain("on behalf of the featured organization");
+      expect(res.text).toContain("AI-assisted research");
+      expect(res.text).toContain("may contain inaccuracies");
+      expect(res.text).toContain("media background and reference purposes only");
+      expect(res.text).toContain("should not be quoted or published without independent verification");
+      expect(res.text).toContain("contact the organization directly");
+      expect(res.text).toContain("confidential and intended solely for the designated recipient");
+      expect(res.text).toContain("Powered by Distribute.io");
+      // Disclaimer should appear before </body>
+      const disclaimerIdx = res.text.indexOf("Disclaimer");
+      const bodyCloseIdx = res.text.indexOf("</body>");
+      expect(disclaimerIdx).toBeLessThan(bodyCloseIdx);
+    });
+
     it("escapes HTML in favicon iconUrl to prevent XSS", async () => {
       const content = htmlPage();
       const kit = await insertTestMediaKit({

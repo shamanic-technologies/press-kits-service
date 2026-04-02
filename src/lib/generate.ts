@@ -70,7 +70,7 @@ Output a **complete, valid HTML document** — from \`<!DOCTYPE html>\` to \`</h
 - Images should have \`rounded-xl\` and subtle shadows. Gallery images in a responsive grid (\`grid grid-cols-2 md:grid-cols-3 gap-4\`).
 - Use \`<details>\` / \`<summary>\` for expandable content (press coverage, long lists).
 - Must be **fully responsive** — mobile-first with Tailwind breakpoints.
-- Footer: include "Powered by Distribute" at the bottom, small and subtle.
+- Do NOT include any footer — a legal disclaimer and branding footer are injected server-side.
 
 ### Client/Partner Logos:
 
