@@ -212,14 +212,17 @@ describe("Public", () => {
 
       expect(res.status).toBe(200);
       expect(res.text).toContain("Disclaimer");
-      expect(res.text).toContain("Distribute.io");
+      expect(res.text).toContain("Distribute.io, a third-party media service");
       expect(res.text).toContain("on behalf of the featured organization");
-      expect(res.text).toContain("AI-assisted research");
-      expect(res.text).toContain("may contain inaccuracies");
+      expect(res.text).toContain("AI-assisted research and editorial tools");
+      expect(res.text).toContain("may contain inaccuracies, omissions, or outdated details");
+      expect(res.text).toContain("does not constitute an official statement, endorsement, or representation by the featured organization");
       expect(res.text).toContain("media background and reference purposes only");
-      expect(res.text).toContain("should not be quoted or published without independent verification");
+      expect(res.text).toContain("may not be quoted, reproduced, or used as-is in articles or external communications without independent verification");
       expect(res.text).toContain("contact the organization directly");
-      expect(res.text).toContain("confidential and intended solely for the designated recipient");
+      expect(res.text).toContain("Confidentiality notice");
+      expect(res.text).toContain("confidential and intended solely for the use of the individual or entity");
+      expect(res.text).toContain("Unauthorized distribution, reproduction, or use of this material is strictly prohibited");
       expect(res.text).toContain("Powered by Distribute.io");
       // Disclaimer should appear before </body>
       const disclaimerIdx = res.text.indexOf("Disclaimer");
