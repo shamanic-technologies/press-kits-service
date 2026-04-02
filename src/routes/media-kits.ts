@@ -53,19 +53,22 @@ async function expireStaleGeneratingKits(): Promise<void> {
 
 const EXCERPT_LENGTH = 200;
 
-/** Strip MDX/Markdown markup and return first ~200 chars of plain text. */
-function extractContentExcerpt(mdx: string | null): string | null {
-  if (!mdx) return null;
-  const plain = mdx
-    .replace(/^import\s.*$/gm, "")      // import statements
-    .replace(/<[^>]+>/g, "")             // JSX/HTML tags
-    .replace(/!\[.*?\]\(.*?\)/g, "")     // images
-    .replace(/\[([^\]]*)\]\(.*?\)/g, "$1") // links → text
-    .replace(/^#{1,6}\s+/gm, "")        // headings
-    .replace(/[*_~`>]/g, "")            // inline formatting
-    .replace(/\n{2,}/g, " ")            // collapse blank lines
-    .replace(/\n/g, " ")                // remaining newlines
-    .replace(/ {2,}/g, " ")             // collapse multiple spaces
+/** Strip HTML tags and return first ~200 chars of plain text. */
+function extractContentExcerpt(html: string | null): string | null {
+  if (!html) return null;
+  const plain = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "") // script blocks
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")   // style blocks
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")     // head block
+    .replace(/<[^>]+>/g, " ")                          // all remaining tags
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{2,}/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/ {2,}/g, " ")
     .trim();
   if (!plain) return null;
   return plain.length <= EXCERPT_LENGTH

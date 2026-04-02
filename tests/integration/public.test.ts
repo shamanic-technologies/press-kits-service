@@ -8,6 +8,21 @@ import { eq } from "drizzle-orm";
 
 const app = createTestApp();
 
+/** Minimal valid HTML page for tests */
+function htmlPage(opts: { title?: string; body?: string } = {}): string {
+  const title = opts.title ?? "Test Kit";
+  const body = opts.body ?? "<h1>Hello World</h1><p>This is a press kit.</p>";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${title}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>${body}</body>
+</html>`;
+}
+
 describe("Public", () => {
   beforeEach(async () => {
     await cleanTestData();
@@ -19,11 +34,12 @@ describe("Public", () => {
   });
 
   describe("GET /public/:token", () => {
-    it("returns rendered HTML page with kit content", async () => {
+    it("returns the HTML page directly as stored", async () => {
+      const content = htmlPage({ title: "Public Kit", body: "<h1>Hello World</h1><p>This is a press kit.</p>" });
       const kit = await insertTestMediaKit({
         orgId: "org_pub",
         title: "Public Kit",
-        mdxPageContent: "# Hello World\n\nThis is a press kit.",
+        mdxPageContent: content,
         status: "validated",
       });
 
@@ -37,110 +53,113 @@ describe("Public", () => {
       expect(res.text).toContain("This is a press kit.");
     });
 
-    it("renders modern layout with header, Inter font, and card sections", async () => {
+    it("serves Tailwind CDN page without transformation", async () => {
+      const content = htmlPage({
+        title: "Tailwind Kit",
+        body: '<div class="max-w-4xl mx-auto py-16"><h1 class="text-4xl font-bold">Modern Kit</h1><p class="text-gray-600">Intro paragraph.</p></div>',
+      });
       const kit = await insertTestMediaKit({
         orgId: "org_modern",
         title: "Modern Kit",
-        mdxPageContent: "# Modern Kit\n\nIntro paragraph.\n\n## Overview\n\nOverview content.\n\n## Team\n\nTeam content.",
+        mdxPageContent: content,
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.text).toContain("fonts.googleapis.com");
-      expect(res.text).toContain("Inter");
-      expect(res.text).toContain('class="header"');
-      expect(res.text).toContain('class="page-title"');
-      expect(res.text).toContain("Press Kit");
-      // Each h2 section is wrapped in a card
-      expect(res.text).toContain('<section class="card"><h2>Overview</h2>');
-      expect(res.text).toContain('<section class="card"><h2>Team</h2>');
-      // Intro text before first h2 is NOT in a card
-      expect(res.text).toContain("<p>Intro paragraph.</p>");
-      expect(res.text).not.toMatch(/<section class="card">.*<p>Intro paragraph\.<\/p>/s);
+      expect(res.text).toContain("cdn.tailwindcss.com");
+      expect(res.text).toContain('class="max-w-4xl mx-auto py-16"');
+      expect(res.text).toContain('class="text-4xl font-bold"');
+      expect(res.text).toContain('class="text-gray-600"');
     });
 
-    it("shows brand logo from iconUrl in header", async () => {
+    it("injects favicon when iconUrl is set", async () => {
+      const content = htmlPage({ title: "Icon Kit" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_icon",
+        title: "Icon Kit",
+        iconUrl: "https://cdn.example.com/icon.png",
+        mdxPageContent: content,
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('rel="icon"');
+      expect(res.text).toContain("https://cdn.example.com/icon.png");
+    });
+
+    it("does not inject favicon when iconUrl is null", async () => {
+      const content = htmlPage();
+      const kit = await insertTestMediaKit({
+        orgId: "org_noicon",
+        title: "No Icon",
+        mdxPageContent: content,
+        status: "validated",
+      });
+
+      const res = await request(app).get(`/public/${kit.shareToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('rel="icon"');
+    });
+
+    it("injects logo.dev token into img.logo.dev URLs", async () => {
+      const content = htmlPage({
+        body: '<img src="https://img.logo.dev/acme.com?format=png&size=80" alt="Acme" />',
+      });
       const kit = await insertTestMediaKit({
         orgId: "org_logo",
         title: "Logo Kit",
-        iconUrl: "https://cdn.example.com/logo.png",
-        mdxPageContent: "# Logo Kit\n\nHas a logo.",
+        mdxPageContent: content,
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.text).toContain('class="brand-logo"');
-      expect(res.text).toContain("https://cdn.example.com/logo.png");
+      expect(res.text).toContain("https://img.logo.dev/acme.com?format=png&size=80&token=test-logo-dev-token");
     });
 
-    it("falls back to logo.dev via brandDomain with token when iconUrl is not set", async () => {
+    it("does not double-inject token if already present", async () => {
+      const content = htmlPage({
+        body: '<img src="https://img.logo.dev/acme.com?token=existing" alt="Acme" />',
+      });
       const kit = await insertTestMediaKit({
-        orgId: "org_domain",
-        title: "Domain Kit",
-        brandDomain: "example.com",
-        mdxPageContent: "# Domain Kit\n\nFallback logo.",
+        orgId: "org_token",
+        title: "Token Kit",
+        mdxPageContent: content,
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.text).toContain('class="brand-logo"');
-      expect(res.text).toContain("https://img.logo.dev/example.com");
-      expect(res.text).toContain("token=test-logo-dev-token");
-      expect(res.text).toContain('onerror="this.style.display=');
+      // Should keep the existing token, not add another
+      expect(res.text).toContain("token=existing");
+      expect(res.text).not.toContain("test-logo-dev-token");
     });
 
-    it("does not render logo when neither iconUrl nor brandDomain is set", async () => {
+    it("handles empty content gracefully", async () => {
       const kit = await insertTestMediaKit({
-        orgId: "org_nologo",
-        title: "No Logo Kit",
-        mdxPageContent: "# No Logo\n\nContent.",
+        orgId: "org_empty",
+        title: "Empty Kit",
+        mdxPageContent: null,
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.text).not.toContain('class="brand-logo"');
-    });
-
-    it("escapes HTML in the title to prevent XSS", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_xss",
-        title: '<script>alert("xss")</script>',
-        mdxPageContent: "# Safe Content",
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).not.toContain('<script>alert("xss")</script>');
-      expect(res.text).toContain("&lt;script&gt;");
-    });
-
-    it("renders with default title when kit title is null", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_notitle",
-        title: null,
-        mdxPageContent: "# No Title Kit",
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain("<title>Press Kit</title>");
+      expect(res.text).toBe("");
     });
 
     it("tracks a view on successful access", async () => {
       const kit = await insertTestMediaKit({
         orgId: "org_pub_views",
+        mdxPageContent: htmlPage(),
         status: "validated",
       });
 
@@ -170,198 +189,30 @@ describe("Public", () => {
     });
 
     it("does not require auth", async () => {
-      const kit = await insertTestMediaKit({ orgId: "org_pub_3", status: "drafted" });
+      const kit = await insertTestMediaKit({
+        orgId: "org_pub_3",
+        mdxPageContent: htmlPage(),
+        status: "drafted",
+      });
       const res = await request(app).get(`/public/${kit.shareToken}`);
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/text\/html/);
     });
 
-    it("includes favicon link when iconUrl is set", async () => {
+    it("escapes HTML in favicon iconUrl to prevent XSS", async () => {
+      const content = htmlPage();
       const kit = await insertTestMediaKit({
-        orgId: "org_icon",
-        title: "Icon Kit",
-        iconUrl: "https://cdn.example.com/icon.png",
-        mdxPageContent: "# With Icon",
+        orgId: "org_xss",
+        title: "XSS Kit",
+        iconUrl: '"><script>alert("xss")</script>',
+        mdxPageContent: content,
         status: "validated",
       });
 
       const res = await request(app).get(`/public/${kit.shareToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.text).toContain('rel="icon"');
-      expect(res.text).toContain("https://cdn.example.com/icon.png");
-    });
-
-    it("renders InteractiveImage as figure with img and caption", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_img",
-        title: "Image Kit",
-        mdxPageContent: '# Image Kit\n\n<InteractiveImage src="https://example.com/photo.jpg" alt="Team photo" caption="Our team at the summit" />',
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('class="interactive-image"');
-      expect(res.text).toContain('src="https://example.com/photo.jpg"');
-      expect(res.text).toContain('alt="Team photo"');
-      expect(res.text).toContain("Our team at the summit");
-    });
-
-    it("renders ClientLogo with logo.dev image and token", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_clogo",
-        title: "Logo Kit",
-        mdxPageContent: '# Logo Kit\n\n<ClientLogo domain="acme.com" name="Acme Corp" />',
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('class="client-logo"');
-      expect(res.text).toContain("https://img.logo.dev/acme.com");
-      expect(res.text).toContain("Acme Corp");
-      // Token from key-service should be included in the logo URL
-      expect(res.text).toContain("token=test-logo-dev-token");
-    });
-
-    it("renders Collapsible as details/summary", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_collapse",
-        title: "Collapsible Kit",
-        mdxPageContent: "# Collapsible Kit\n\n<Collapsible>\n<CollapsibleTrigger>\nShow More\n</CollapsibleTrigger>\n<CollapsibleContent>\nHidden content here.\n</CollapsibleContent>\n</Collapsible>",
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('class="collapsible"');
-      expect(res.text).toContain("<summary>");
-      expect(res.text).toContain("Show More");
-      expect(res.text).toContain("Hidden content here.");
-    });
-
-    it("renders Card components as styled divs", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_card",
-        title: "Card Kit",
-        mdxPageContent: '# Card Kit\n\n<div className="not-prose my-6">\n<Card>\n<CardHeader>\n<CardTitle>Key Facts</CardTitle>\n</CardHeader>\n<CardContent>\nSome facts here.\n</CardContent>\n</Card>\n</div>',
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('class="jsx-card"');
-      expect(res.text).toContain('class="jsx-card-header"');
-      expect(res.text).toContain('class="jsx-card-title"');
-      expect(res.text).toContain("Key Facts");
-      expect(res.text).toContain("Some facts here.");
-      // className should be converted to class
-      expect(res.text).not.toContain("className");
-    });
-
-    it("parses markdown inside CollapsibleContent", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_collapse_md",
-        title: "Collapsible MD Kit",
-        mdxPageContent: [
-          "# Collapsible MD Kit",
-          "",
-          "<Collapsible>",
-          "<CollapsibleTrigger>",
-          "View Timeline",
-          "</CollapsibleTrigger>",
-          "<CollapsibleContent>",
-          "",
-          "### Project Timeline",
-          "",
-          "- **2025** — Phase one launch",
-          "- **2026** — Phase two expansion",
-          "",
-          "</CollapsibleContent>",
-          "</Collapsible>",
-        ].join("\n"),
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      // Markdown inside collapsible should be parsed to HTML
-      expect(res.text).toContain("<h3>Project Timeline</h3>");
-      expect(res.text).toContain("<strong>2025</strong>");
-      expect(res.text).toContain("<li>");
-      // Should NOT contain raw markdown
-      expect(res.text).not.toContain("### Project Timeline");
-      expect(res.text).not.toContain("- **2025**");
-    });
-
-    it("strips Tailwind utility classes from wrapper divs", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_tailwind",
-        title: "Tailwind Strip Kit",
-        mdxPageContent: '# TW Kit\n\n<div className="not-prose my-6">\n<ClientLogo domain="test.com" name="Test" />\n</div>',
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      // Tailwind classes should be stripped
-      expect(res.text).not.toContain("not-prose");
-      expect(res.text).not.toContain("my-6");
-      // ClientLogo should still render
-      expect(res.text).toContain('class="client-logo"');
-    });
-
-    it("does not double-wrap sections that contain jsx-card", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_nodbwrap",
-        title: "No Double Wrap",
-        mdxPageContent: "# NDW\n\n## Facts\n\n<Card><CardContent>Inner card</CardContent></Card>",
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      // Section with jsx-card should NOT be wrapped in an outer card
-      expect(res.text).not.toContain('<section class="card"><h2>Facts</h2>');
-      expect(res.text).toContain('class="jsx-card"');
-    });
-
-    it("adds onerror fallback to InteractiveImage", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_imgerr",
-        title: "Img Error Kit",
-        mdxPageContent: '# Img Kit\n\n<InteractiveImage src="https://broken.example.com/img.jpg" alt="Broken" caption="Missing photo" />',
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain("img-broken");
-      expect(res.text).toContain("Missing photo");
-    });
-
-    it("escapes brandDomain in logo URL to prevent XSS", async () => {
-      const kit = await insertTestMediaKit({
-        orgId: "org_xss_domain",
-        title: "XSS Domain Kit",
-        brandDomain: '"><script>alert(1)</script>',
-        mdxPageContent: "# Test",
-        status: "validated",
-      });
-
-      const res = await request(app).get(`/public/${kit.shareToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.text).not.toContain('<script>alert(1)</script>');
+      expect(res.text).not.toContain('<script>alert("xss")</script>');
       expect(res.text).toContain("&quot;");
     });
   });

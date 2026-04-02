@@ -53,8 +53,8 @@ export const MediaKitResponseSchema = z
       example: "acme.com",
     }),
     mdxPageContent: z.string().nullable().openapi({
-      description: "Full MDX content of the press kit page.",
-      example: "# Acme Corp\n\nAcme Corp is a leading provider of innovative SaaS solutions...",
+      description: "Full HTML content of the press kit page (complete document with Tailwind CDN).",
+      example: '<!DOCTYPE html><html><head><title>Acme Corp — Press Kit</title></head><body>...</body></html>',
     }),
     parentMediaKitId: z.string().uuid().nullable().openapi({
       description:
@@ -77,7 +77,7 @@ export const MediaKitResponseSchema = z
 
 export const MediaKitSummarySchema = MediaKitResponseSchema.extend({
   contentExcerpt: z.string().nullable().openapi({
-    description: "First ~200 characters of the MDX content, stripped of markup. Useful for card/grid previews.",
+    description: "First ~200 characters of the page content, stripped of HTML tags. Useful for card/grid previews.",
     example: "Acme Corp is a leading provider of innovative solutions in the SaaS space, serving over 10,000 customers worldwide...",
   }),
 }).omit({ mdxPageContent: true }).openapi("MediaKitSummary");
@@ -88,7 +88,7 @@ export const MediaKitListResponseSchema = z
 
 export const UpdateMdxRequestSchema = z
   .object({
-    mdxContent: z.string().openapi({ example: "# Updated Press Kit\n\nNew content goes here..." }),
+    mdxContent: z.string().openapi({ example: '<!DOCTYPE html><html><head><title>Updated Press Kit</title></head><body>...</body></html>' }),
   })
   .openapi("UpdateMdxRequest");
 
@@ -165,7 +165,7 @@ export const UpsertGenerationResultRequestSchema = z
       description: "Org ID fallback when mediaKitId is not provided.",
       example: "org_3ANNRtJtvq2vahygqOSJ7IjRfp1",
     }),
-    mdxContent: z.string().openapi({ example: "# Generated Press Kit\n\nContent produced by the generation workflow..." }),
+    mdxContent: z.string().openapi({ example: '<!DOCTYPE html><html><head><title>Generated Press Kit</title></head><body>...</body></html>' }),
     title: z.string().optional().openapi({ example: "Acme Corp Press Kit — Q1 2026" }),
     iconUrl: z.string().optional().openapi({ example: "https://cdn.example.com/brands/acme/icon.png" }),
   })
@@ -291,7 +291,7 @@ registry.registerPath({
   method: "get",
   path: "/media-kits/{id}",
   summary: "Get media kit by ID",
-  description: "Returns full media kit including MDX content. Kits stuck in 'generating' for over 30 minutes are automatically transitioned to 'failed'.",
+  description: "Returns full media kit including HTML content. Kits stuck in 'generating' for over 30 minutes are automatically transitioned to 'failed'.",
   tags: ["Media Kits"],
   request: {
     headers: requiredHeaders,
@@ -306,8 +306,8 @@ registry.registerPath({
 registry.registerPath({
   method: "patch",
   path: "/media-kits/{id}/mdx",
-  summary: "Update MDX content",
-  description: "Directly update the MDX page content of a media kit. Typically used for manual edits after generation.",
+  summary: "Update HTML content",
+  description: "Directly update the HTML page content of a media kit. Typically used for manual edits after generation.",
   tags: ["Media Kits"],
   request: {
     headers: requiredHeaders,
@@ -524,7 +524,7 @@ registry.registerPath({
   method: "post",
   path: "/internal/media-kits/generation-result",
   summary: "Upsert generation result (workflow callback)",
-  description: "Called by the generation workflow on success. Updates the generating kit with the produced MDX content and transitions it to 'drafted' status.",
+  description: "Called by the generation workflow on success. Updates the generating kit with the produced HTML content and transitions it to 'drafted' status.",
   tags: ["Internal"],
   request: {
     headers: requiredHeaders,

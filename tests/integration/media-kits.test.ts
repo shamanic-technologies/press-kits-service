@@ -112,18 +112,18 @@ describe("Media Kits", () => {
       expect(res.status).toBe(400);
     });
 
-    it("returns contentExcerpt stripped of MDX markup", async () => {
+    it("returns contentExcerpt stripped of HTML tags", async () => {
       await insertTestMediaKit({
         orgId: "org_excerpt",
         status: "validated",
-        mdxPageContent: "# Welcome\n\nThis is **bold** and [a link](https://example.com).\n\n<CustomComponent prop=\"val\" />\n\nPlain text here.",
+        mdxPageContent: '<!DOCTYPE html><html><head><title>Welcome</title><style>body{color:red}</style></head><body><h1>Welcome</h1><p>This is <strong>bold</strong> and <a href="https://example.com">a link</a>.</p><p>Plain text here.</p></body></html>',
       });
 
       const res = await request(app).get("/media-kits?org_id=org_excerpt").set(headers);
 
       expect(res.status).toBe(200);
       const kit = res.body.mediaKits[0];
-      expect(kit.contentExcerpt).toBe("Welcome This is bold and a link. Plain text here.");
+      expect(kit.contentExcerpt).toBe("Welcome This is bold and a link . Plain text here.");
       expect(kit.mdxPageContent).toBeUndefined();
     });
 
@@ -141,7 +141,7 @@ describe("Media Kits", () => {
     });
 
     it("truncates long content with ellipsis", async () => {
-      const longContent = "# Title\n\n" + "Lorem ipsum dolor sit amet. ".repeat(20);
+      const longContent = '<!DOCTYPE html><html><head><title>Title</title></head><body><p>' + "Lorem ipsum dolor sit amet. ".repeat(20) + '</p></body></html>';
       await insertTestMediaKit({
         orgId: "org_long",
         status: "validated",
