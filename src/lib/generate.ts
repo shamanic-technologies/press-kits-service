@@ -380,7 +380,8 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
       systemPrompt: buildSystemPrompt(),
       provider: "google",
       model: "pro",
-      maxTokens: 16384,
+      maxTokens: 24000,
+      thinkingBudget: 8000,
     },
     ctx,
   );

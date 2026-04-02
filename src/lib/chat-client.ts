@@ -19,6 +19,7 @@ export async function complete(
     model: string;
     maxTokens?: number;
     temperature?: number;
+    thinkingBudget?: number;
   },
   ctx?: ContextHeaders
 ): Promise<CompleteResponse> {
