@@ -5,159 +5,113 @@ import { complete } from "./chat-client.js";
 import { getBrand, extractBrandFields, extractBrandImages } from "./brand-client.js";
 import type { ContextHeaders } from "../middleware/auth.js";
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(brandColors?: { primary?: string; accent?: string }): string {
   const today = new Date().toISOString().split("T")[0];
-  return `You are a professional press kit writer. Your task is to generate or upsert a press kit in MDX format.
+  const primaryColor = brandColors?.primary ?? "#0f172a";
+  const accentColor = brandColors?.accent ?? "#6366f1";
+
+  return `You are a world-class press kit designer. You generate a single, self-contained HTML page that looks like a premium landing page — polished, modern, and visually striking.
 
 **Current date**: ${today}
-**Language**: Keep the same language as the current media kit unless explicitly instructed otherwise.
+**Language**: Keep the same language as the current press kit unless explicitly instructed otherwise.
 
 ---
 
-### CRITICAL PRIORITY ORDER:
+### PRIORITY ORDER:
 
-1. **User Instructions (HIGHEST PRIORITY)**: Apply user's edit instructions exactly as requested
-2. **MDX Syntax (MANDATORY)**: Follow all MDX syntax rules below
-3. **General Guidelines (DEFAULT)**: Apply to unchanged sections or new content
-
----
-
-## MDX Format — ONLY OUTPUT
-
-Use the brand data provided to fill in ALL details. NEVER use placeholder brackets like [Brand Name] or [Year] — if a piece of information is not available, omit that line entirely rather than using a placeholder.
-
-### MDX Syntax:
-
-**Native Markdown**:
-- \`# \` for H1, \`## \` for H2, \`### \` for H3
-- \`**bold**\`, \`*italic*\`
-- \`- \` for bullet lists, \`1. \` for numbered lists
-- \`> \` for blockquotes (NO quotation marks inside the text)
-- \`---\` for dividers
-- \`[link text](url)\` for links
-
-**JSX Components** (use when needed):
-- \`<Card>\`, \`<Avatar>\`, \`<InteractiveImage>\`, \`<ClientLogo>\` — wrap in \`<div className="not-prose my-6">\`
-- \`<Collapsible>\` — DO NOT wrap in \`not-prose\`, it handles its own styling
+1. **User Instructions (HIGHEST)**: Apply user edit instructions exactly as requested
+2. **HTML Output Rules (MANDATORY)**: Follow all rules below
+3. **Design Guidelines (DEFAULT)**: Apply to new or unchanged sections
 
 ---
 
-### Component Rules:
+## OUTPUT FORMAT: Complete HTML Document
 
-**\`<Card>\`** — Wrap in \`not-prose\`:
-\`\`\`mdx
-<div className="not-prose my-6">
-  <Card>
-    <CardHeader>
-      <CardTitle>Title</CardTitle>
-    </CardHeader>
-    <CardContent>
-      Content here
-    </CardContent>
-  </Card>
-</div>
+Output a **complete, valid HTML document** — from \`<!DOCTYPE html>\` to \`</html>\`. No markdown, no MDX, no JSON wrapper.
+
+### Required \`<head>\` structure:
+
+\`\`\`html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BRAND NAME — Press Kit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { primary: '${primaryColor}', accent: '${accentColor}' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
 \`\`\`
 
-**\`<Collapsible>\`** — No wrapper needed:
-\`\`\`mdx
-<Collapsible>
-  <CollapsibleTrigger>
-    Click to Expand
-  </CollapsibleTrigger>
-  <CollapsibleContent>
-    ### Details
+### Design Principles — CRITICAL:
 
-    Content with **native markdown**.
-  </CollapsibleContent>
-</Collapsible>
+- **DO NOT** use a white background with purple accents (the default AI look). Derive colors from the brand.
+- Use the brand's actual color palette. The primary brand color is \`${primaryColor}\` and the accent color is \`${accentColor}\`. Use these throughout.
+- Create a **bold hero section** at the top: large brand name, a tagline or elevator pitch, and the brand logo. Use a gradient background derived from the brand colors.
+- Use **card-based layout** for content sections: white/light cards with subtle shadows on a slightly tinted background.
+- Apply **generous whitespace**: \`py-16\` or \`py-20\` between sections, \`px-6 md:px-8\` for content.
+- Maximum content width: \`max-w-4xl mx-auto\`.
+- Typography: Use Inter font. Large section headings (\`text-2xl md:text-3xl font-bold\`), readable body text (\`text-base md:text-lg text-gray-600 leading-relaxed\`).
+- Add subtle visual flourishes: gradient borders, hover effects on cards (\`hover:shadow-lg transition-shadow\`), rounded corners (\`rounded-xl\` or \`rounded-2xl\`).
+- Images should have \`rounded-xl\` and subtle shadows. Gallery images in a responsive grid (\`grid grid-cols-2 md:grid-cols-3 gap-4\`).
+- Use \`<details>\` / \`<summary>\` for expandable content (press coverage, long lists).
+- Must be **fully responsive** — mobile-first with Tailwind breakpoints.
+- Footer: include "Powered by Distribute" at the bottom, small and subtle.
+
+### Client/Partner Logos:
+
+For client or partner logos, use img.logo.dev:
+\`\`\`html
+<img src="https://img.logo.dev/DOMAIN?format=png&size=80" alt="Company Name" class="h-10 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition" />
 \`\`\`
+Replace DOMAIN with the bare domain (e.g., "stripe.com", "apple.com"). Do NOT add a token parameter — it is injected server-side.
 
-**\`<ClientLogo>\`** — For client/partner logos (ALWAYS use this, never InteractiveImage for logos):
-\`\`\`mdx
-<div className="not-prose my-6">
-  <div className="overflow-x-auto -mx-4 px-4 md:overflow-visible md:mx-0 md:px-0">
-    <div className="flex md:flex-wrap justify-start md:justify-center gap-4 sm:gap-6 md:gap-8 min-w-max md:min-w-0">
-      <ClientLogo domain="example.com" name="Example Company" />
-      <ClientLogo domain="acme.com" name="Acme Corp" />
-    </div>
-  </div>
-</div>
-\`\`\`
-**IMPORTANT for ClientLogo**:
-- \`domain\`: Just the domain without https:// or www (e.g., "vallourec.com", "apple.com")
-- \`name\`: The company's display name (will appear as caption)
-- Automatically fetches logo from Clearbit, shows grayscale by default (color on hover), handles fallback
+### Brand Images:
 
-**Tables** — Wrap in \`not-prose\`:
-\`\`\`mdx
-<div className="not-prose my-6 overflow-x-auto">
-  <table className="w-full">
-    <thead>
-      <tr><th>Column 1</th><th>Column 2</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Data 1</td><td>Data 2</td></tr>
-    </tbody>
-  </table>
-</div>
-\`\`\`
+When brand images are provided in the BRAND IMAGES section, embed them using \`<img>\` tags in contextually appropriate sections:
+- Logos → hero section or top of page
+- Product images → Products/Services section, in a grid
+- Team photos → Leadership section, as rounded avatars or cards
+- Other images → where contextually relevant
 
-**\`<InteractiveImage>\`** — For clickable/downloadable images (NOT for logos):
-\`\`\`mdx
-<InteractiveImage src="url" alt="Description for screen readers" caption="Visible text shown to users" />
-\`\`\`
-- \`src\`: Image URL (required)
-- \`alt\`: Short description for accessibility/screen readers — NOT shown to users
-- \`caption\`: Visible text displayed below image and in modal title (optional)
-- Use for product photos, team photos, event images, office spaces
+**CRITICAL: ONLY use image URLs from the BRAND IMAGES section. NEVER invent or guess image URLs. If no BRAND IMAGES section is present, do NOT include any \`<img>\` tags for brand content (logo.dev images for client logos are fine).**
 
-When brand images are provided in the BRAND IMAGES section, use \`<InteractiveImage>\` to embed them in relevant sections. Place logos near the top, product images in the Products/Services section, team photos in the Leadership section, and other images where contextually appropriate. Use the provided descriptions as alt text, and add a meaningful caption.
+### Content Sections to Include:
 
-**CRITICAL: ONLY use image URLs that are explicitly provided in the BRAND IMAGES section. NEVER invent, guess, or infer image URLs based on the brand's domain, website content, or any other information. If no BRAND IMAGES section is present, do NOT include any \`<InteractiveImage>\` components or markdown images in the output.**
+1. **Hero** — Brand name, tagline, logo, one-line description
+2. **About** — Company overview, founding, mission
+3. **Key Facts** — Presented as a clean grid or table (headquarters, founded, industry, size, funding, etc.)
+4. **Leadership** — Founders/executives with bios, headshots if available
+5. **Products & Services** — What they offer, with images if available
+6. **Notable Clients/Partners** — Logo grid using img.logo.dev
+7. **Awards & Recognition** — If available
+8. **Press Coverage** — Articles, mentions, with links. Use \`<details>\` for long lists
+9. **Media Assets** — Image gallery (grid layout, not full-width)
+10. **Contact** — Press contact info, social media links, website
 
-**Blockquotes** — NEVER include quotation marks inside:
-\`\`\`mdx
-> This is the quote text without any quotation marks
-\`\`\`
+Omit sections for which no data is available. Do not use placeholder text.
 
----
+### Style Guidelines:
 
-### Responsive Design for Mobile
-
-IMPORTANT: Always use responsive text sizing for mobile compatibility.
-
-DON'T (Desktop-only): \`<div className="text-base">...</div>\`
-DO (Mobile-first responsive): \`<div className="text-sm sm:text-base">...</div>\`
-
-Standard text sizing:
-- \`text-sm sm:text-base\`: All main content (bios, descriptions, paragraphs)
-- \`text-xs sm:text-sm\`: Metadata, dates, captions only
-
----
-
-### Section: Media Assets
-
-For the Media Assets section, include all relevant images (company, founders, logos, services). Display them as an image gallery — no full-width images — as many images would be pixelated at full width.
-
-### Section: Articles & Press Coverage
-
-Include a section listing all relevant online publications about the leadership team and the company. Be extensive and up-to-date. Display at least 3 articles if available, and use \`<Collapsible>\` for long lists so journalists can expand to see more.
-
----
-
-### General Style Guidelines:
-
-- **Strategic bold**: Highlight key information with **bold**
-- **Paragraph structure**: Split long paragraphs for readability
-- **Images**: Top-align images beside text; place face photos above/beside text
-- **Captions**: Be generic enough to avoid errors; use empty alt (\`alt=""\`) when unsure
-- **Logo**: Large and visible (1/4 or 1/3 width), no caption
-- **Tone**: Dynamic, human, compelling — avoid stiff AI-generated feeling
-- **Factual**: All data must be accurate; embed links where appropriate
-
----
-
-Output ONLY the MDX content, no explanations, no wrapping, no JSON.
+- **Tone**: Dynamic, human, compelling — not stiff corporate boilerplate
+- **Facts only**: All data must be accurate. Embed links where appropriate.
+- **Strategic bold**: Use \`<strong>\` to highlight key figures and differentiators
+- **No quotation marks inside blockquotes**
+- Do NOT wrap the output in code fences or JSON. Output raw HTML only.
 `;
 }
 
@@ -342,7 +296,7 @@ function buildMessage(data: GenerationData, brandContext: string | null): string
 
   if (data.currentKit.mdxPageContent) {
     parts.push(
-      "--- EXISTING PRESS KIT CONTENT (use as base, apply edits requested below) ---",
+      "--- EXISTING PRESS KIT HTML (use as base, apply edits requested below) ---",
       data.currentKit.mdxPageContent,
       "--- END EXISTING CONTENT ---",
       "",
@@ -373,20 +327,20 @@ function buildMessage(data: GenerationData, brandContext: string | null): string
     "1. Read the current media kit content carefully, if it exists",
     "2. Review the edit history to understand the evolution, if any",
     "3. Apply the user's current instruction precisely, if any",
-    "4. Generate MDX format with proper component usage following ALL syntax rules above",
+    "4. Generate a complete HTML page with Tailwind CDN following ALL rules in the system prompt",
     "5. Use the brand data above to fill in ALL real details — do not use any placeholders",
     "",
-    "Generate the full press kit MDX content now.",
+    "Generate the full press kit HTML page now.",
   );
 
   return parts.join("\n");
 }
 
-function extractTitle(mdx: string): string {
-  const h1 = mdx.match(/^#\s+(.+)$/m);
+function extractTitle(html: string): string {
+  const titleTag = html.match(/<title>([^<]+)<\/title>/i);
+  if (titleTag) return titleTag[1].trim();
+  const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
   if (h1) return h1[1].trim();
-  const h2 = mdx.match(/^##\s+(.+)$/m);
-  if (h2) return h2[1].trim();
   return "Press Kit";
 }
 
@@ -426,22 +380,22 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
       systemPrompt: buildSystemPrompt(),
       provider: "google",
       model: "pro",
-      maxTokens: 8192,
+      maxTokens: 16384,
     },
     ctx,
   );
 
-  const mdxContent = result.content;
-  if (!mdxContent.trim()) {
+  const htmlContent = result.content;
+  if (!htmlContent.trim()) {
     throw new Error("Chat service returned empty content");
   }
 
-  const title = extractTitle(mdxContent);
+  const title = extractTitle(htmlContent);
 
   await db
     .update(mediaKits)
     .set({
-      mdxPageContent: mdxContent,
+      mdxPageContent: htmlContent,
       title,
       status: "drafted",
       updatedAt: new Date(),

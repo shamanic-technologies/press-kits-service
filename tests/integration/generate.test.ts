@@ -43,7 +43,7 @@ describe("generatePressKit", () => {
     await closeDb();
   });
 
-  it("generates MDX and updates kit to drafted", async () => {
+  it("generates HTML and updates kit to drafted", async () => {
     const kit = await insertTestMediaKit({
       orgId: "org-gen",
       status: "generating",
@@ -55,7 +55,7 @@ describe("generatePressKit", () => {
     });
 
     mockComplete.mockResolvedValue({
-      content: "# Acme Corp Press Kit\n\n## Overview\n\nAcme Corp is a leading provider of widgets.",
+      content: '<!DOCTYPE html><html><head><title>Acme Corp Press Kit</title></head><body><h1>Acme Corp</h1><section>Overview content</section></body></html>',
       tokensInput: 100,
       tokensOutput: 200,
       model: "claude-sonnet-4-6",
@@ -70,11 +70,12 @@ describe("generatePressKit", () => {
 
     expect(updated.status).toBe("drafted");
     expect(updated.title).toBe("Acme Corp Press Kit");
-    expect(updated.mdxPageContent).toContain("## Overview");
+    expect(updated.mdxPageContent).toContain("Overview content");
 
     const callArgs = mockComplete.mock.calls[0][0];
     expect(callArgs.provider).toBe("google");
     expect(callArgs.model).toBe("pro");
+    expect(callArgs.maxTokens).toBe(16384);
   });
 
   it("does nothing when kit is not in generating status", async () => {
@@ -121,7 +122,7 @@ describe("generatePressKit", () => {
     const kit = await insertTestMediaKit({
       orgId: "org-edit",
       status: "generating",
-      mdxPageContent: "# Old Kit\n\nOld content here.",
+      mdxPageContent: "<!DOCTYPE html><html><head><title>Old Kit</title></head><body>Old content here.</body></html>",
     });
     await insertTestInstruction({
       mediaKitId: kit.id,
@@ -130,7 +131,7 @@ describe("generatePressKit", () => {
     });
 
     mockComplete.mockResolvedValue({
-      content: "# Updated Kit\n\n## Overview\n\nOld content here.\n\n## Sustainability\n\nNew section.",
+      content: '<!DOCTYPE html><html><head><title>Updated Kit</title></head><body><section>Old content here.</section><section>Sustainability</section></body></html>',
       tokensInput: 100,
       tokensOutput: 200,
       model: "claude-sonnet-4-6",
@@ -139,10 +140,10 @@ describe("generatePressKit", () => {
     await generatePressKit(kit.id);
 
     const callArgs = mockComplete.mock.calls[0][0];
-    expect(callArgs.message).toContain("EXISTING PRESS KIT CONTENT");
+    expect(callArgs.message).toContain("EXISTING PRESS KIT HTML");
     expect(callArgs.message).toContain("Old content here.");
     expect(callArgs.message).toContain("Add a sustainability section");
-    expect(callArgs.systemPrompt).toContain("press kit writer");
+    expect(callArgs.systemPrompt).toContain("press kit designer");
   });
 
   it("includes previous denial feedback in message", async () => {
@@ -212,7 +213,7 @@ describe("generatePressKit", () => {
     ]);
 
     mockComplete.mockResolvedValue({
-      content: "# Polarity Course Press Kit\n\n## Company Overview\n\nPolarity Course is an ed-tech platform.",
+      content: '<!DOCTYPE html><html><head><title>Polarity Course Press Kit</title></head><body><h1>Polarity Course</h1><section>Polarity Course is an ed-tech platform.</section></body></html>',
       tokensInput: 500,
       tokensOutput: 300,
       model: "claude-sonnet-4-6",
@@ -240,8 +241,8 @@ describe("generatePressKit", () => {
     expect(callArgs.message).toContain("Jane Doe, CEO");
     expect(callArgs.message).toContain("Self-paced courses");
 
-    // Verify system prompt forbids placeholders
-    expect(callArgs.systemPrompt).toContain("NEVER use placeholder brackets");
+    // Verify system prompt mentions HTML output
+    expect(callArgs.systemPrompt).toContain("Complete HTML Document");
 
     // Verify kit was updated
     const [updated] = await db
@@ -503,8 +504,8 @@ describe("generatePressKit", () => {
     // Empty category (team) should not appear
     expect(callArgs.message).not.toContain("Category: team");
 
-    // Verify system prompt mentions image usage
-    expect(callArgs.systemPrompt).toContain("brand images are provided");
+    // Verify system prompt mentions brand images
+    expect(callArgs.systemPrompt).toContain("BRAND IMAGES");
 
     // Verify kit was updated
     const [updated] = await db
