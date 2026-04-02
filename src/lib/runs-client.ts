@@ -65,14 +65,22 @@ export interface RunCost {
   provisionedCostInUsdCents: string;
 }
 
+const BATCH_CHUNK_SIZE = 500;
+
 export async function batchGetCosts(
   runIds: string[],
   ctx?: ContextHeaders
 ): Promise<RunCost[]> {
   if (runIds.length === 0) return [];
-  const result = await runsRequest<{ costs: RunCost[] }>(
-    "/v1/runs/costs/batch",
-    { method: "POST", body: { runIds }, ctx }
-  );
-  return result.costs;
+
+  const allCosts: RunCost[] = [];
+  for (let i = 0; i < runIds.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = runIds.slice(i, i + BATCH_CHUNK_SIZE);
+    const result = await runsRequest<{ costs: RunCost[] }>(
+      "/v1/runs/costs/batch",
+      { method: "POST", body: { runIds: chunk }, ctx }
+    );
+    allCosts.push(...result.costs);
+  }
+  return allCosts;
 }
