@@ -75,8 +75,8 @@ describe("generatePressKit", () => {
     const callArgs = mockComplete.mock.calls[0][0];
     expect(callArgs.provider).toBe("google");
     expect(callArgs.model).toBe("pro");
-    expect(callArgs.maxTokens).toBe(24000);
-    expect(callArgs.thinkingBudget).toBe(8000);
+    expect(callArgs.maxTokens).toBe(65536);
+    expect(callArgs.thinkingBudget).toBe(20000);
   });
 
   it("does nothing when kit is not in generating status", async () => {
