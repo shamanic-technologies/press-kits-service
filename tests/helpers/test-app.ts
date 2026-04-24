@@ -6,6 +6,7 @@ import mediaKitsRoutes from "../../src/routes/media-kits.js";
 import publicRoutes from "../../src/routes/public.js";
 import adminRoutes from "../../src/routes/admin.js";
 import internalRoutes from "../../src/routes/internal.js";
+import internalTransferRoutes from "../../src/routes/internal-transfer.js";
 import statsRoutes from "../../src/routes/stats.js";
 
 export function createTestApp(): express.Express {
@@ -16,8 +17,11 @@ export function createTestApp(): express.Express {
   app.use(healthRoutes);
   app.use(publicRoutes);
 
-  // Protected routes
+  // Protected routes (API key only)
   app.use(requireApiKey);
+  app.use(internalTransferRoutes);
+
+  // Routes requiring identity headers + run tracking
   app.use(requireIdentityHeaders);
   app.use(trackRun);
   app.use(mediaKitsRoutes);
