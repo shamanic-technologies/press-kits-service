@@ -13,6 +13,7 @@ import mediaKitsRoutes from "./routes/media-kits.js";
 import publicRoutes from "./routes/public.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
+import internalTransferRoutes from "./routes/internal-transfer.js";
 import statsRoutes from "./routes/stats.js";
 import openapiRoutes from "./routes/openapi.js";
 
@@ -27,8 +28,13 @@ app.use(healthRoutes);
 app.use(publicRoutes);
 app.use(openapiRoutes);
 
-// Protected routes (require API key + identity headers + run tracking)
+// Protected routes (require API key)
 app.use(requireApiKey);
+
+// Internal routes that need API key only (no identity headers)
+app.use(internalTransferRoutes);
+
+// Routes that also require identity headers + run tracking
 app.use(requireIdentityHeaders);
 app.use(trackRun);
 app.use(mediaKitsRoutes);

@@ -632,6 +632,60 @@
           "pressKitUrl",
           "content"
         ]
+      },
+      "TransferBrandResponse": {
+        "type": "object",
+        "properties": {
+          "updatedTables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tableName": {
+                  "type": "string",
+                  "example": "media_kits"
+                },
+                "count": {
+                  "type": "number",
+                  "example": 3
+                }
+              },
+              "required": [
+                "tableName",
+                "count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "updatedTables"
+        ]
+      },
+      "TransferBrandRequest": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Brand UUID to transfer",
+            "example": "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5"
+          },
+          "sourceOrgId": {
+            "type": "string",
+            "description": "Current org UUID that owns the brand",
+            "example": "org_source123"
+          },
+          "targetOrgId": {
+            "type": "string",
+            "description": "Target org UUID to transfer the brand to",
+            "example": "org_target456"
+          }
+        },
+        "required": [
+          "brandId",
+          "sourceOrgId",
+          "targetOrgId"
+        ]
       }
     },
     "parameters": {},
@@ -2005,6 +2059,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EmailDataResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/transfer-brand": {
+      "post": {
+        "summary": "Transfer brand ownership between orgs (solo-brand only)",
+        "description": "Re-assigns all solo-brand rows referencing brandId from sourceOrgId to targetOrgId. Skips co-branding rows (multiple brand IDs). Idempotent — running twice is a no-op. Requires x-api-key only (no org context headers).",
+        "tags": [
+          "Internal"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferBrandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer result with per-table update counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferBrandResponse"
                 }
               }
             }
