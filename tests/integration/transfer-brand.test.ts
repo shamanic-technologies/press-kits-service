@@ -40,7 +40,7 @@ describe("POST /internal/transfer-brand", () => {
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -58,6 +58,39 @@ describe("POST /internal/transfer-brand", () => {
     expect(kits[0].title).toBe("Solo Kit");
   });
 
+  it("rewrites brand_ids when targetBrandId is provided", async () => {
+    const TARGET_BRAND = "b0000000-0000-0000-0000-000000000001";
+
+    await insertTestMediaKit({
+      orgId: "org-source",
+      brandIds: [BRAND_1],
+      status: "validated",
+      title: "Rewrite Kit",
+    });
+
+    const res = await request(app)
+      .post("/internal/transfer-brand")
+      .set(apiKeyHeader)
+      .send({
+        sourceBrandId: BRAND_1,
+        sourceOrgId: "org-source",
+        targetOrgId: "org-target",
+        targetBrandId: TARGET_BRAND,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.updatedTables).toEqual([
+      { tableName: "media_kits", count: 1 },
+    ]);
+
+    const kits = await db
+      .select()
+      .from(mediaKits)
+      .where(eq(mediaKits.orgId, "org-target"));
+    expect(kits).toHaveLength(1);
+    expect(kits[0].brandIds).toEqual([TARGET_BRAND]);
+  });
+
   it("skips co-branding rows (multiple brand IDs)", async () => {
     await insertTestMediaKit({
       orgId: "org-source",
@@ -70,7 +103,7 @@ describe("POST /internal/transfer-brand", () => {
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -98,7 +131,7 @@ describe("POST /internal/transfer-brand", () => {
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -117,7 +150,7 @@ describe("POST /internal/transfer-brand", () => {
     });
 
     const payload = {
-      brandId: BRAND_1,
+      sourceBrandId: BRAND_1,
       sourceOrgId: "org-source",
       targetOrgId: "org-target",
     };
@@ -162,7 +195,7 @@ describe("POST /internal/transfer-brand", () => {
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -178,7 +211,7 @@ describe("POST /internal/transfer-brand", () => {
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -190,7 +223,7 @@ describe("POST /internal/transfer-brand", () => {
     const res = await request(app)
       .post("/internal/transfer-brand")
       .send({
-        brandId: BRAND_1,
+        sourceBrandId: BRAND_1,
         sourceOrgId: "org-source",
         targetOrgId: "org-target",
       });
@@ -202,7 +235,7 @@ describe("POST /internal/transfer-brand", () => {
     const res = await request(app)
       .post("/internal/transfer-brand")
       .set(apiKeyHeader)
-      .send({ brandId: "not-a-uuid" });
+      .send({ sourceBrandId: "not-a-uuid" });
 
     expect(res.status).toBe(400);
   });
