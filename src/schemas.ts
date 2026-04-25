@@ -256,9 +256,10 @@ export const CostStatsResponseSchema = z
 
 export const TransferBrandRequestSchema = z
   .object({
-    brandId: z.string().uuid().openapi({ description: "Brand UUID to transfer", example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5" }),
+    sourceBrandId: z.string().uuid().openapi({ description: "Brand UUID to transfer from source org", example: "a6b5fdad-b31d-4fa2-b34b-1cec4cb21ce5" }),
     sourceOrgId: z.string().openapi({ description: "Current org UUID that owns the brand", example: "org_source123" }),
     targetOrgId: z.string().openapi({ description: "Target org UUID to transfer the brand to", example: "org_target456" }),
+    targetBrandId: z.string().uuid().optional().openapi({ description: "Brand UUID in target org to rewrite to (when target org already has a brand for the same domain)", example: "b7c6gebe-c42e-5gb3-c45c-2ded5dc32df6" }),
   })
   .openapi("TransferBrandRequest");
 
@@ -576,7 +577,7 @@ registry.registerPath({
   method: "post",
   path: "/internal/transfer-brand",
   summary: "Transfer brand ownership between orgs (solo-brand only)",
-  description: "Re-assigns all solo-brand rows referencing brandId from sourceOrgId to targetOrgId. Skips co-branding rows (multiple brand IDs). Idempotent — running twice is a no-op. Requires x-api-key only (no org context headers).",
+  description: "Re-assigns all solo-brand rows referencing sourceBrandId from sourceOrgId to targetOrgId. When targetBrandId is provided, also rewrites brand_ids to the target brand. Skips co-branding rows (multiple brand IDs). Idempotent — running twice is a no-op. Requires x-api-key only (no org context headers).",
   tags: ["Internal"],
   request: {
     body: { content: { "application/json": { schema: TransferBrandRequestSchema } } },
