@@ -11,28 +11,34 @@ router.post("/internal/transfer-brand", async (req, res) => {
   try {
     const { sourceBrandId, sourceOrgId, targetOrgId, targetBrandId } = TransferBrandRequestSchema.parse(req.body);
 
-    // Update media_kits where org_id = sourceOrgId AND brand_ids has exactly one element AND that element is sourceBrandId
-    const setClause: Record<string, unknown> = { orgId: targetOrgId, updatedAt: new Date() };
-    if (targetBrandId) {
-      setClause.brandIds = [targetBrandId];
-    }
+    const soloSourceFilter = and(
+      drizzleSql`array_length(${mediaKits.brandIds}, 1) = 1`,
+      drizzleSql`${mediaKits.brandIds}[1] = ${sourceBrandId}`
+    );
 
-    const result = await db
+    // Step 1: Move org_id for solo-brand rows in sourceOrg
+    const step1 = await db
       .update(mediaKits)
-      .set(setClause)
-      .where(
-        and(
-          eq(mediaKits.orgId, sourceOrgId),
-          drizzleSql`array_length(${mediaKits.brandIds}, 1) = 1`,
-          drizzleSql`${mediaKits.brandIds}[1] = ${sourceBrandId}`
-        )
-      )
+      .set({ orgId: targetOrgId, updatedAt: new Date() })
+      .where(and(eq(mediaKits.orgId, sourceOrgId), soloSourceFilter))
       .returning({ id: mediaKits.id });
 
-    console.log(`[press-kits-service] transfer-brand: updated ${result.length} media_kits rows (brand=${sourceBrandId}${targetBrandId ? ` -> ${targetBrandId}` : ""}, ${sourceOrgId} -> ${targetOrgId})`);
+    // Step 2: Rewrite brand_ids everywhere (no org filter) — only when targetBrandId is provided
+    let step2Count = 0;
+    if (targetBrandId) {
+      const step2 = await db
+        .update(mediaKits)
+        .set({ brandIds: [targetBrandId], updatedAt: new Date() })
+        .where(soloSourceFilter)
+        .returning({ id: mediaKits.id });
+      step2Count = step2.length;
+    }
+
+    const totalUpdated = Math.max(step1.length, step2Count);
+    console.log(`[press-kits-service] transfer-brand: updated ${totalUpdated} media_kits rows (brand=${sourceBrandId}${targetBrandId ? ` -> ${targetBrandId}` : ""}, ${sourceOrgId} -> ${targetOrgId})`);
 
     res.json({
-      updatedTables: [{ tableName: "media_kits", count: result.length }],
+      updatedTables: [{ tableName: "media_kits", count: totalUpdated }],
     });
   } catch (err) {
     console.error("[press-kits-service] POST /internal/transfer-brand error:", err);
