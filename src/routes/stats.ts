@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { sql as pgSql } from "../db/index.js";
 import { batchGetCosts } from "../lib/runs-client.js";
-import { resolveFeatureDynastySlugs, resolveWorkflowDynastySlugs } from "../lib/dynasty-client.js";
+import { resolveWorkflowDynastySlugs } from "../lib/dynasty-client.js";
 import { getContextHeaders } from "../middleware/auth.js";
 
 const router = Router();
 
-const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]);
+const VALID_GROUP_BY = new Set(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug", "workflowDynastySlug"]);
 
 const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> = {
   country: {
@@ -38,10 +38,6 @@ const GROUP_BY_EXPRESSION: Record<string, { select: string; groupBy: string }> =
     groupBy: "mk.workflow_slug",
   },
   // Dynasty groupBy: we group by the versioned slug in SQL, then re-aggregate in JS
-  featureDynastySlug: {
-    select: "mk.feature_slug",
-    groupBy: "mk.feature_slug",
-  },
   workflowDynastySlug: {
     select: "mk.workflow_slug",
     groupBy: "mk.workflow_slug",
@@ -60,18 +56,6 @@ async function resolveDynastyFilters(
   const conditions: string[] = [];
   const params: string[] = [];
   let nextIdx = idx;
-
-  if (q.featureDynastySlug) {
-    const slugs = await resolveFeatureDynastySlugs(q.featureDynastySlug, ctx);
-    if (slugs.length === 0) {
-      // No slugs in this dynasty — force empty result
-      conditions.push("FALSE");
-    } else {
-      const placeholders = slugs.map(() => `$${nextIdx++}`);
-      conditions.push(`mk.feature_slug IN (${placeholders.join(", ")})`);
-      params.push(...slugs);
-    }
-  }
 
   if (q.workflowDynastySlug) {
     const slugs = await resolveWorkflowDynastySlugs(q.workflowDynastySlug, ctx);
@@ -99,36 +83,7 @@ async function buildDynastySlugMap(
   // Map from versioned slug → dynasty slug
   const map = new Map<string, string>();
 
-  if (groupBy === "featureDynastySlug") {
-    // All these versioned slugs belong to potentially different dynasties.
-    // features-service exposes GET /features/dynasty?slug=X to resolve one slug.
-    // But we also have GET /features/dynasty/slugs?dynastySlug=X which goes the other way.
-    // The simplest approach: call the resolve endpoint for each unique slug.
-    // Number of unique feature slugs per org is typically very small (< 10).
-    const FEATURES_SERVICE_URL = process.env.FEATURES_SERVICE_URL || "http://localhost:3010";
-    const FEATURES_SERVICE_API_KEY = process.env.FEATURES_SERVICE_API_KEY || "";
-    const { buildForwardHeaders } = await import("../middleware/auth.js");
-    const headers: Record<string, string> = { "X-API-Key": FEATURES_SERVICE_API_KEY };
-    if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
-
-    await Promise.all(
-      versionedKeys.map(async (slug) => {
-        try {
-          const url = `${FEATURES_SERVICE_URL}/features/dynasty?slug=${encodeURIComponent(slug)}`;
-          const res = await fetch(url, { headers });
-          if (res.ok) {
-            const body = (await res.json()) as { feature_dynasty_slug: string };
-            map.set(slug, body.feature_dynasty_slug);
-          } else {
-            // If we can't resolve, use the slug itself as the dynasty key
-            map.set(slug, slug);
-          }
-        } catch {
-          map.set(slug, slug);
-        }
-      })
-    );
-  } else if (groupBy === "workflowDynastySlug") {
+  if (groupBy === "workflowDynastySlug") {
     // workflow-service has GET /workflows/dynasty?slug=X (reverse lookup)
     const WORKFLOW_SERVICE_URL = process.env.WORKFLOW_SERVICE_URL || "http://localhost:3004";
     const WORKFLOW_SERVICE_API_KEY = process.env.WORKFLOW_SERVICE_API_KEY || "";
@@ -208,7 +163,7 @@ router.get("/media-kits/stats/views", async (req, res) => {
 
     if (groupBy && VALID_GROUP_BY.has(groupBy)) {
       const expr = GROUP_BY_EXPRESSION[groupBy];
-      const isDynastyGroupBy = groupBy === "featureDynastySlug" || groupBy === "workflowDynastySlug";
+      const isDynastyGroupBy = groupBy === "workflowDynastySlug";
 
       const rows = await pgSql.unsafe(
         `SELECT
@@ -345,13 +300,12 @@ router.get("/media-kits/stats/costs", async (req, res) => {
       featureSlug: "feature_slug",
       workflowSlug: "workflow_slug",
       // Dynasty groupBy: group by versioned slug in SQL, re-aggregate in JS
-      featureDynastySlug: "feature_slug",
       workflowDynastySlug: "workflow_slug",
     };
 
     const costGroupBy = q.groupBy as string | undefined;
     const groupByColumn = costGroupBy ? COST_GROUP_BY_COLUMN[costGroupBy] : undefined;
-    const isDynastyGroupBy = costGroupBy === "featureDynastySlug" || costGroupBy === "workflowDynastySlug";
+    const isDynastyGroupBy = costGroupBy === "workflowDynastySlug";
 
     // When grouping, we need the group column from the right table
     const groupBySelectExpr = groupByColumn
