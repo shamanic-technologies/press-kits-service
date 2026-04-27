@@ -430,7 +430,6 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
-          "featureDynastySlug",
           "workflowDynastySlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
@@ -493,7 +492,6 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
-          "featureDynastySlug",
           "workflowDynastySlug"
         ],
         "description": "Group results by dimension. Omit for flat totals."
@@ -898,15 +896,6 @@
             },
             "required": false,
             "name": "x-workflow-slug",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Stable feature dynasty slug (version-independent). Forwarded to downstream services."
-            },
-            "required": false,
-            "name": "x-feature-dynasty-slug",
             "in": "header"
           },
           {
@@ -1429,15 +1418,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (stable across versions)"
-            },
-            "required": false,
-            "name": "featureDynastySlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Filter by workflow dynasty slug (stable across versions)"
             },
             "required": false,
@@ -1580,15 +1560,6 @@
             },
             "required": false,
             "name": "workflowSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by feature dynasty slug (stable across versions)"
-            },
-            "required": false,
-            "name": "featureDynastySlug",
             "in": "query"
           },
           {

@@ -8,10 +8,9 @@ import {
   closeDb,
 } from "../helpers/test-db.js";
 import { batchGetCosts } from "../../src/lib/runs-client.js";
-import { resolveFeatureDynastySlugs, resolveWorkflowDynastySlugs } from "../../src/lib/dynasty-client.js";
+import { resolveWorkflowDynastySlugs } from "../../src/lib/dynasty-client.js";
 
 const mockBatchGetCosts = vi.mocked(batchGetCosts);
-const mockResolveFeature = vi.mocked(resolveFeatureDynastySlugs);
 const mockResolveWorkflow = vi.mocked(resolveWorkflowDynastySlugs);
 
 const app = createTestApp();
@@ -342,29 +341,6 @@ describe("Cost Stats", () => {
       const g2 = res.body.groups.find((g: { dimensions: { workflowSlug: string } }) => g.dimensions.workflowSlug === "wf-2");
       expect(g1.totalCostInUsdCents).toBe(800);
       expect(g2.totalCostInUsdCents).toBe(200);
-    });
-
-    it("filters by featureDynastySlug via service resolution", async () => {
-      mockResolveFeature.mockResolvedValue(["feat-v1", "feat-v2"]);
-
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "feat-v1" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "other-feat" });
-
-      await insertTestMediaKitRun({ mediaKitId: kit1.id, runId: "run-fd1", runType: "generation" });
-      await insertTestMediaKitRun({ mediaKitId: kit2.id, runId: "run-fd2", runType: "generation" });
-
-      mockBatchGetCosts.mockResolvedValue([
-        { runId: "run-fd1", totalCostInUsdCents: "250", actualCostInUsdCents: "250", provisionedCostInUsdCents: "0" },
-      ]);
-
-      const res = await request(app)
-        .get("/media-kits/stats/costs?featureDynastySlug=my-dynasty")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      expect(res.body.groups[0].runCount).toBe(1);
-      expect(mockBatchGetCosts).toHaveBeenCalledWith(["run-fd1"], expect.anything());
-      expect(mockResolveFeature).toHaveBeenCalledWith("my-dynasty", expect.anything());
     });
 
     it("filters by workflowDynastySlug via service resolution", async () => {
