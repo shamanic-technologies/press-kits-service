@@ -2,9 +2,8 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import { createTestApp, getAuthHeaders } from "../helpers/test-app.js";
 import { cleanTestData, insertTestMediaKit, insertTestView, closeDb } from "../helpers/test-db.js";
-import { resolveFeatureDynastySlugs, resolveWorkflowDynastySlugs } from "../../src/lib/dynasty-client.js";
+import { resolveWorkflowDynastySlugs } from "../../src/lib/dynasty-client.js";
 
-const mockResolveFeature = vi.mocked(resolveFeatureDynastySlugs);
 const mockResolveWorkflow = vi.mocked(resolveWorkflowDynastySlugs);
 
 const app = createTestApp();
@@ -301,27 +300,6 @@ describe("Stats", () => {
       const g2 = res.body.groups.find((g: { key: string }) => g.key === "press-kit-v2");
       expect(g1.totalViews).toBe(1);
       expect(g2.totalViews).toBe(2);
-    });
-
-    it("filters by featureDynastySlug via service resolution", async () => {
-      // Dynasty "press-kit-page-generation" maps to versioned slugs v1 and v2
-      mockResolveFeature.mockResolvedValue(["press-kit-v1", "press-kit-v2"]);
-
-      const kit1 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v1" });
-      const kit2 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "press-kit-v2" });
-      const kit3 = await insertTestMediaKit({ orgId: "test-org-id", status: "validated", featureSlug: "other-feature" });
-
-      await insertTestView({ mediaKitId: kit1.id, country: "US" });
-      await insertTestView({ mediaKitId: kit2.id, country: "US" });
-      await insertTestView({ mediaKitId: kit3.id, country: "US" });
-
-      const res = await request(app)
-        .get("/media-kits/stats/views?featureDynastySlug=press-kit-page-generation")
-        .set(headers);
-
-      expect(res.status).toBe(200);
-      expect(res.body.totalViews).toBe(2);
-      expect(mockResolveFeature).toHaveBeenCalledWith("press-kit-page-generation", expect.anything());
     });
 
     it("filters by workflowDynastySlug via service resolution", async () => {

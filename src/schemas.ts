@@ -28,7 +28,6 @@ const optionalContextHeaders = z.object({
   "x-campaign-id": z.string().optional().openapi({ description: "Campaign UUID — scopes kit to a specific campaign" }),
   "x-feature-slug": z.string().optional().openapi({ description: "Feature slug (e.g. 'press-kit-v2')" }),
   "x-workflow-slug": z.string().optional().openapi({ description: "Workflow slug override for generation" }),
-  "x-feature-dynasty-slug": z.string().optional().openapi({ description: "Stable feature dynasty slug (version-independent). Forwarded to downstream services." }),
   "x-workflow-dynasty-slug": z.string().optional().openapi({ description: "Stable workflow dynasty slug (version-independent). Forwarded to downstream services." }),
 });
 
@@ -180,7 +179,7 @@ const HealthResponseSchema = z
 
 // --- Stats Schemas ---
 
-const ViewStatsGroupByEnum = z.enum(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]).openapi("ViewStatsGroupBy");
+const ViewStatsGroupByEnum = z.enum(["country", "mediaKitId", "day", "brandId", "campaignId", "featureSlug", "workflowSlug", "workflowDynastySlug"]).openapi("ViewStatsGroupBy");
 
 export const ViewStatsQuerySchema = z
   .object({
@@ -189,7 +188,6 @@ export const ViewStatsQuerySchema = z
     mediaKitId: z.string().uuid().optional().openapi({ description: "Filter by specific media kit UUID" }),
     featureSlug: z.string().optional().openapi({ description: "Filter by feature slug (e.g. 'press-kit-v2')" }),
     workflowSlug: z.string().optional().openapi({ description: "Filter by workflow slug" }),
-    featureDynastySlug: z.string().optional().openapi({ description: "Filter by feature dynasty slug (stable across versions)" }),
     workflowDynastySlug: z.string().optional().openapi({ description: "Filter by workflow dynasty slug (stable across versions)" }),
     from: z.string().datetime().optional().openapi({ description: "Start of date range (ISO 8601)", example: "2026-03-01T00:00:00Z" }),
     to: z.string().datetime().optional().openapi({ description: "End of date range (ISO 8601)", example: "2026-03-31T23:59:59Z" }),
@@ -221,7 +219,7 @@ export const ViewStatsGroupedResponseSchema = z
 
 // --- Cost Stats Schemas ---
 
-const CostStatsGroupByEnum = z.enum(["mediaKitId", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]).openapi("CostStatsGroupBy");
+const CostStatsGroupByEnum = z.enum(["mediaKitId", "brandId", "campaignId", "featureSlug", "workflowSlug", "workflowDynastySlug"]).openapi("CostStatsGroupBy");
 
 export const CostStatsQuerySchema = z
   .object({
@@ -230,7 +228,6 @@ export const CostStatsQuerySchema = z
     campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign UUID" }),
     featureSlug: z.string().optional().openapi({ description: "Filter by feature slug (e.g. 'press-kit-v2')" }),
     workflowSlug: z.string().optional().openapi({ description: "Filter by workflow slug" }),
-    featureDynastySlug: z.string().optional().openapi({ description: "Filter by feature dynasty slug (stable across versions)" }),
     workflowDynastySlug: z.string().optional().openapi({ description: "Filter by workflow dynasty slug (stable across versions)" }),
     groupBy: CostStatsGroupByEnum.optional().openapi({ description: "Group results by dimension. Omit for flat totals." }),
   })

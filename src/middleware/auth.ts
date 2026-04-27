@@ -10,7 +10,6 @@ declare global {
       brandIds: string[];
       campaignId?: string;
       featureSlug?: string;
-      featureDynastySlug?: string;
       workflowDynastySlug?: string;
     }
   }
@@ -40,7 +39,6 @@ export function requireIdentityHeaders(req: Request, res: Response, next: NextFu
   req.brandIds = String(req.headers["x-brand-id"] ?? "").split(",").map(s => s.trim()).filter(Boolean).sort();
   req.campaignId = req.headers["x-campaign-id"] as string | undefined;
   req.featureSlug = req.headers["x-feature-slug"] as string | undefined;
-  req.featureDynastySlug = req.headers["x-feature-dynasty-slug"] as string | undefined;
   req.workflowDynastySlug = req.headers["x-workflow-dynasty-slug"] as string | undefined;
   next();
 }
@@ -53,7 +51,6 @@ export interface ContextHeaders {
   brandIds: string[];
   campaignId?: string;
   featureSlug?: string;
-  featureDynastySlug?: string;
   workflowDynastySlug?: string;
 }
 
@@ -66,7 +63,6 @@ export function getContextHeaders(req: Request): ContextHeaders {
     brandIds: req.brandIds,
     campaignId: req.campaignId,
     featureSlug: req.featureSlug,
-    featureDynastySlug: req.featureDynastySlug,
     workflowDynastySlug: req.workflowDynastySlug,
   };
 }
@@ -81,7 +77,6 @@ export function buildForwardHeaders(ctx: ContextHeaders): Record<string, string>
   if (ctx.brandIds.length > 0) headers["x-brand-id"] = ctx.brandIds.join(",");
   if (ctx.campaignId) headers["x-campaign-id"] = ctx.campaignId;
   if (ctx.featureSlug) headers["x-feature-slug"] = ctx.featureSlug;
-  if (ctx.featureDynastySlug) headers["x-feature-dynasty-slug"] = ctx.featureDynastySlug;
   if (ctx.workflowDynastySlug) headers["x-workflow-dynasty-slug"] = ctx.workflowDynastySlug;
   return headers;
 }
