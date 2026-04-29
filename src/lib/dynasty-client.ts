@@ -17,7 +17,7 @@ export async function resolveWorkflowDynastySlugs(
   };
   if (ctx) Object.assign(headers, buildForwardHeaders(ctx));
 
-  const url = `${WORKFLOW_SERVICE_URL}/workflows/dynasty/slugs?dynastySlug=${encodeURIComponent(dynastySlug)}`;
+  const url = `${WORKFLOW_SERVICE_URL}/workflows/dynasty/slugs?workflowDynastySlug=${encodeURIComponent(dynastySlug)}`;
   const response = await fetch(url, { headers });
 
   if (!response.ok) {
@@ -25,6 +25,6 @@ export async function resolveWorkflowDynastySlugs(
     throw new Error(`[press-kits-service] workflow-service GET /workflows/dynasty/slugs failed (${response.status}): ${text}`);
   }
 
-  const body = (await response.json()) as { dynastySlug: string; dynastyName: string; slugs: string[] };
-  return body.slugs;
+  const body = (await response.json()) as { workflowDynastySlug: string; workflowDynastyName: string; workflowSlugs: string[] };
+  return body.workflowSlugs;
 }

@@ -97,8 +97,8 @@ async function buildDynastySlugMap(
           const url = `${WORKFLOW_SERVICE_URL}/workflows/dynasty?slug=${encodeURIComponent(slug)}`;
           const res = await fetch(url, { headers });
           if (res.ok) {
-            const body = (await res.json()) as { dynastySlug: string };
-            map.set(slug, body.dynastySlug);
+            const body = (await res.json()) as { workflowDynastySlug: string };
+            map.set(slug, body.workflowDynastySlug);
           } else {
             map.set(slug, slug);
           }
