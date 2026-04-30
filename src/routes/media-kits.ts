@@ -10,6 +10,7 @@ import {
 import { createRun, updateRunStatus } from "../lib/runs-client.js";
 import { generatePressKit } from "../lib/generate.js";
 import { sendEmail } from "../lib/email-client.js";
+import { traceEvent } from "../lib/trace-event.js";
 import { getContextHeaders } from "../middleware/auth.js";
 import type { ContextHeaders } from "../middleware/auth.js";
 
@@ -338,6 +339,14 @@ router.post("/media-kits", async (req, res) => {
     const kitId = generatingKit.id;
     const runType: "generation" | "edit" = currentKit ? "edit" : "generation";
 
+    if (req.runId) {
+      traceEvent(req.runId, {
+        service: "press-kits-service",
+        event: "create-media-kit",
+        detail: `kitId=${kitId}, type=${runType}, brandIds=${ctx.brandIds.join(",")}`,
+      }, req.headers).catch(() => {});
+    }
+
     createRun({
       orgId: generatingKit.orgId,
       userId: req.userId,
@@ -363,6 +372,12 @@ router.post("/media-kits", async (req, res) => {
           await updateRunStatus(run.id, "completed", childCtx);
         } catch (err) {
           console.error("[press-kits-service] Generation failed:", err);
+          traceEvent(run.id, {
+            service: "press-kits-service",
+            event: "generate-error",
+            detail: err instanceof Error ? err.message : String(err),
+            level: "error",
+          }, req.headers).catch(() => {});
           await updateRunStatus(run.id, "failed", childCtx).catch((e) =>
             console.error("[press-kits-service] Failed to close run:", e)
           );
