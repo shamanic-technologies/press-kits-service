@@ -3,7 +3,9 @@ import { db } from "../db/index.js";
 import { mediaKits, mediaKitInstructions } from "../db/schema.js";
 import { complete } from "./chat-client.js";
 import { getBrand, extractBrandFields, extractBrandImages } from "./brand-client.js";
+import { traceEvent } from "./trace-event.js";
 import type { ContextHeaders } from "../middleware/auth.js";
+import { buildForwardHeaders } from "../middleware/auth.js";
 
 function buildSystemPrompt(brandColors?: { primary?: string; accent?: string }): string {
   const today = new Date().toISOString().split("T")[0];
@@ -345,6 +347,9 @@ function extractTitle(html: string): string {
 }
 
 export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders): Promise<void> {
+  const headers = ctx ? buildForwardHeaders(ctx) : {};
+  const runId = ctx?.runId;
+
   const data = await fetchGenerationData(mediaKitId);
   if (!data) {
     console.error(`[press-kits-service] Generation: kit ${mediaKitId} not found or not in generating status`);
@@ -352,6 +357,13 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
   }
 
   console.log(`[press-kits-service] Starting generation for kit ${mediaKitId}`);
+  if (runId) {
+    traceEvent(runId, {
+      service: "press-kits-service",
+      event: "generate-start",
+      detail: `kitId=${mediaKitId}, brandIds=${data.currentKit.brandIds.join(",")}, campaignId=${data.currentKit.campaignId ?? "none"}`,
+    }, headers).catch(() => {});
+  }
 
   // Fetch brand context if brandIds are available
   let brandContext: string | null = null;
@@ -359,6 +371,14 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
     brandContext = await fetchBrandContext(data.currentKit.brandIds, ctx);
   } else {
     console.warn(`[press-kits-service] No brandIds on kit ${mediaKitId} — generating without brand data`);
+  }
+
+  if (runId) {
+    traceEvent(runId, {
+      service: "press-kits-service",
+      event: "brand-data-fetched",
+      detail: `brandIds=${data.currentKit.brandIds.join(",")}, hasContext=${!!brandContext}`,
+    }, headers).catch(() => {});
   }
 
   const message = buildMessage(data, brandContext);
@@ -374,6 +394,14 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
     }
   }
 
+  if (runId) {
+    traceEvent(runId, {
+      service: "press-kits-service",
+      event: "llm-call-start",
+      detail: `provider=google, model=pro`,
+    }, headers).catch(() => {});
+  }
+
   const result = await complete(
     {
       message,
@@ -387,6 +415,14 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
   );
 
   const htmlContent = result.content;
+  if (runId) {
+    traceEvent(runId, {
+      service: "press-kits-service",
+      event: "llm-call-done",
+      detail: `contentLength=${htmlContent.length}`,
+    }, headers).catch(() => {});
+  }
+
   if (!htmlContent.trim()) {
     throw new Error("Chat service returned empty content");
   }
@@ -406,4 +442,11 @@ export async function generatePressKit(mediaKitId: string, ctx?: ContextHeaders)
     .where(eq(mediaKits.id, mediaKitId));
 
   console.log(`[press-kits-service] Generation complete for kit ${mediaKitId}, title: "${title}"`);
+  if (runId) {
+    traceEvent(runId, {
+      service: "press-kits-service",
+      event: "generate-done",
+      detail: `kitId=${mediaKitId}, title=${title}`,
+    }, headers).catch(() => {});
+  }
 }
