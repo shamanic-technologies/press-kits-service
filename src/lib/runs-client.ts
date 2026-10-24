@@ -30,6 +30,18 @@ async function runsRequest<T>(
   return response.json() as Promise<T>;
 }
 
+/**
+ * Every run this service opens is SUPPORT spend, marked at creation (LEDGER-HISTORY-1024, cost-accounting doctrine):
+ * a press kit is consumed by no catalogue pipe, so it is no outcome occurrence (a new outcome is a feature request built
+ * with the pipe that consumes it, never a bare catalogue row). The runs' spend is stated apart as `product_feature`
+ * instead of riding any outcome. Past runs were marked `retired_product` through runs-service's owner support-mark door
+ * (the service has had no container since the 2026-08 migration). Marking twice is idempotent at runs-service.
+ */
+export const RUN_SUPPORT = {
+  kind: "product_feature",
+  reason: "Press kit page generation: a press kit is consumed by no catalogue pipe, so its spend is support (LEDGER-HISTORY-1024).",
+} as const;
+
 export async function createRun(params: {
   orgId: string;
   userId?: string;
@@ -38,8 +50,8 @@ export async function createRun(params: {
   parentRunId?: string;
   ctx?: ContextHeaders;
 }): Promise<{ id: string }> {
-  const { ctx, ...body } = params;
-  return runsRequest("/v1/runs", { method: "POST", body, ctx });
+  const { ctx, ...rest } = params;
+  return runsRequest("/v1/runs", { method: "POST", body: { ...rest, support: RUN_SUPPORT }, ctx });
 }
 
 export async function updateRunStatus(
